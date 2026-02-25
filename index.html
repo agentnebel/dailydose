@@ -486,15 +486,17 @@
                 const results = await Promise.allSettled(promises);
                 
                 let allArticles = [];
-                let hasNewData = false;
+                let allFeedsFresh = true;
 
                 results.forEach(res => {
                     if (res.status === 'fulfilled') {
                         allArticles.push(...res.value);
-                        // Prüfe, ob mindestens ein Feed NICHT aus dem Cache kam (also frisch ist)
-                        if (res.value.length > 0 && !res.value[0].fromCache) {
-                            hasNewData = true;
+                        // Check: Zeitstempel nur aktualisieren, wenn ALLE Feeds frisch sind.
+                        if (res.value.length === 0 || res.value[0].fromCache) {
+                            allFeedsFresh = false;
                         }
+                    } else {
+                        allFeedsFresh = false;
                     }
                 });
 
@@ -511,8 +513,8 @@
                 const now = new Date();
                 const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
                 
-                // Wenn wir frische Daten haben, speichern wir den aktuellen Zeitstempel
-                if (hasNewData) {
+                // Wenn alle Feeds frisch sind, speichern wir den aktuellen Zeitstempel
+                if (allFeedsFresh) {
                     localStorage.setItem('lastSuccessUpdate', now.toISOString());
                     updateInfo.textContent = 'Stand: ' + now.toLocaleDateString('de-DE', options) + ' Uhr';
                 } else {
