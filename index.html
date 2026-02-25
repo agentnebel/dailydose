@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daily Dose for Sven</title>
+    <style>
+        :root {
+            --bg-body: #f4f4f4;
+            --bg-card: #ffffff;
+            --text-main: #333333;
+            --text-meta: #888888;
+            --link-color: #007aff;
+            --shadow-color: rgba(0,0,0,0.05);
+            --header-bg: #ffffff;
+            --header-text: #1a1a1a;
+            --image-bg: #f0f0f0;
+            --toggle-bg: #e0e0e0;
+            --toggle-icon: #555;
+        }
+
+        /* Expliziter Selektor für Dark Mode mit höherer Spezifität (Fix) */
+        html[data-theme="dark"] {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-meta: #aaaaaa;
+            --link-color: #4da3ff;
+            --shadow-color: rgba(0,0,0,0.3);
+            --header-bg: #1e1e1e;
+            --header-text: #ffffff;
+            --image-bg: #333333;
+            --toggle-bg: #333;
+            --toggle-icon: #fbbf24;
+        }
+        
+        /* Sicherstellen, dass body die Farbe auch wirklich annimmt */
+        html, body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 15px;
+            padding-top: 120px; /* Platz für fixierten Header angepasst */
+            line-height: 1.6;
+            background-color: var(--bg-body);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .article-entry {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: fadeIn 0.4s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .article-entry h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.3rem;
+            line-height: 1.3;
+        }
+
+        .article-entry h2 a {
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .article-meta {
+            font-size: 0.75rem;
+            color: var(--text-meta);
+            margin-bottom: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .source-badge {
+            background: var(--image-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .article-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .article-image {
+            width: 280px;
+            height: 180px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background-color: var(--image-bg);
+        }
+
+        .article-text-wrapper { flex: 1; min-width: 0; }
+
+        .article-text {
+            margin: 0 0 12px 0;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .read-more {
+            display: inline-block;
+            color: var(--link-color);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 5px 0;
+        }
+
+        /* --- NEUES HEADER DESIGN --- */
+        header.main-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--shadow-color); /* Flacher Look mit dezenter Trennlinie */
+            transition: background-color 0.3s ease;
+        }
+
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header.main-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #007aff, #00c6ff); /* Farbverlauf */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #last-update {
+            font-size: 0.75rem;
+            color: var(--text-meta);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .theme-toggle {
+            background: var(--toggle-bg);
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: var(--toggle-icon);
+            transition: transform 0.2s, background-color 0.3s;
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; padding-top: 95px; } /* Angepasst für neuen Header */
+            .article-content { flex-direction: column; gap: 12px; }
+            .article-image { width: 100%; height: 200px; max-height: 250px; }
+            .article-entry h2 { font-size: 1.2rem; }
+            
+            /* Responsive Anpassungen für neuen Header */
+            .header-content { padding: 12px 15px; }
+            header.main-header h1 { font-size: 1.5rem; }
+            .theme-toggle { width: 38px; height: 38px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="header-content">
+            <div>
+                <h1>Daily Dose</h1>
+                <div id="last-update"></div>
+            </div>
+            <button class="theme-toggle" id="theme-toggle">🌙</button>
+        </div>
+    </header>
+
+    <div id="feed-container">
+        <div id="loading" style="text-align: center; color: var(--text-meta); padding: 40px;">
+            Lade Nachrichten...
+        </div>
+    </div>
+
+    <script>
+        const RSS_URLS = [
+            'https://www.blocktrainer.de/feed',
+            'https://petapixel.com/feed',
+            'https://www.ifun.de/feed',
+            'https://stadt-bremerhaven.de/feed',
+            'https://streetletter.substack.com/feed',
+            'https://upphotographers.com/feed',
+            'https://eortizfoto.substack.com/feed'
+        ];
+
+        // API Konfiguration
+        const API_KEY = 'l42es2jwwhkaq8xn72z4ogwjrx2zepbbecqh4gfc';
+        const API_BASE = 'https://api.rss2json.com/v1/api.json?rss_url=';
+        const CORS_PROXY = 'https://corsproxy.io/?'; // Fallback
+        
+        // Cache Konfiguration (1 Stunde = 3600000 ms)
+        const CACHE_DURATION = 60 * 60 * 1000; 
+        
+        const DEFAULT_IMAGE = 'https://via.placeholder.com/280x180/e0e0e0/999999?text=News';
+
+        const container = document.getElementById('feed-container');
+        const updateInfo = document.getElementById('last-update');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // --- Theme Logic ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                updateToggleIcon(savedTheme);
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                updateToggleIcon('dark');
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateToggleIcon(newTheme);
+        }
+
+        function updateToggleIcon(theme) {
+            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+        initTheme();
+
+        // --- XML Parser Helper für Fallback ---
+        function parseXMLFeed(xmlText, feedUrl) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+            
+            const channel = xmlDoc.querySelector("channel");
+            const feedTitle = channel.querySelector("title").textContent;
+            
+            const items = Array.from(xmlDoc.querySelectorAll("item"));
+            const parsedItems = items.map(item => {
+                const title = item.querySelector("title")?.textContent || "Kein Titel";
+                const link = item.querySelector("link")?.textContent || "#";
+                const pubDate = item.querySelector("pubDate")?.textContent || new Date().toISOString();
+                const description = item.querySelector("description")?.textContent || "";
+                const content = item.querySelector("encoded")?.textContent || description; 
+                
+                const enclosure = item.querySelector("enclosure");
+                const enclosureLink = enclosure ? enclosure.getAttribute("url") : null;
+
+                return {
+                    title: title,
+                    link: link,
+                    pubDate: pubDate,
+                    description: description,
+                    content: content,
+                    enclosure: { link: enclosureLink },
+                    source: feedTitle,
+                    feedUrl: feedUrl,
+                    fromCache: false,
+                    isFallback: true
+                };
+            });
+
+            return {
+                status: 'ok',
+                feed: { title: feedTitle, url: feedUrl },
+                items: parsedItems
+            };
+        }
+
+        // --- Smart Feed Logic (Cache + API + Fallback) ---
+        async function fetchFeed(url) {
+            const cacheKey = 'rss_cache_' + url;
+            
+            // 1. Prüfen, ob wir gültige Daten im Cache haben
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    const age = Date.now() - parsed.timestamp;
+                    
+                    if (age < CACHE_DURATION) {
+                        return parsed.data.items.map(item => ({
+                            ...item, 
+                            source: parsed.data.feed.title, 
+                            feedUrl: url,
+                            fromCache: true 
+                        }));
+                    }
+                }
+            } catch (e) {
+                console.error("Cache Read Error", e);
+            }
+
+            // 2. Versuch: Primäre API (rss2json)
+            try {
+                const apiUrl = `${API_BASE}${encodeURIComponent(url)}&api_key=${API_KEY}`;
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Primary API failed");
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    saveToCache(cacheKey, data);
+                    return data.items.map(item => ({
+                        ...item, 
+                        source: data.feed.title, 
+                        feedUrl: url,
+                        fromCache: false
+                    }));
+                } else {
+                    throw new Error("API returned error status");
+                }
+            } catch (e) {
+                console.warn(`[API Primary] Fehler bei ${url}:`, e);
+                
+                // 3. Versuch: Fallback Proxy (corsproxy.io)
+                try {
+                    console.log(`[API Fallback] Versuche Proxy für: ${url}`);
+                    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
+                    
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) throw new Error("Fallback Proxy failed");
+                    
+                    const xmlText = await response.text();
+                    const data = parseXMLFeed(xmlText, url);
+                    
+                    if (data.status === 'ok') {
+                        saveToCache(cacheKey, data);
+                        return data.items;
+                    }
+                } catch (fallbackError) {
+                    console.error(`[API Fallback] Auch fehlgeschlagen für ${url}:`, fallbackError);
+                    
+                    // Letzter Rettungsanker: Alter Cache
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        return parsed.data.items.map(item => ({...item, source: parsed.data.feed.title, feedUrl: url, fromCache: true, isStale: true}));
+                    }
+                }
+                return [];
+            }
+        }
+
+        function saveToCache(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify({
+                    timestamp: Date.now(),
+                    data: data
+                }));
+            } catch (e) { console.warn("Cache Full?", e); }
+        }
+
+        function extractImage(item) {
+            if (item.enclosure && item.enclosure.link && !item.enclosure.link.match(/\.(mp3|wav|m4a|mp4)$/i)) {
+                return item.enclosure.link;
+            }
+            if (item.thumbnail) return item.thumbnail;
+
+            const htmlContent = item.content || item.description || "";
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            const images = doc.querySelectorAll('img');
+
+            for (let img of images) {
+                let src = img.getAttribute('src');
+                if (!src) continue;
+                
+                if (src.startsWith('/')) {
+                    try {
+                         const urlObj = new URL(item.feedUrl);
+                         src = urlObj.origin + src;
+                    } catch(e) {}
+                }
+                if (src.includes('vgwort.de') || src.includes('met.vgwort') || src.includes('s.w.org/images/core/emoji')) continue;
+                
+                if (item.feedUrl.includes('stadt-bremerhaven.de')) return src;
+
+                const width = parseInt(img.getAttribute('width')) || 0;
+                const height = parseInt(img.getAttribute('height')) || 0;
+                if (width > 100 || height > 100) return src;
+                if (src && !src.includes('1x1.png')) return src;
+            }
+
+            // Fallbacks
+            if (item.feedUrl.includes('stadt-bremerhaven.de')) return 'https://stadt-bremerhaven.de/wp-content/uploads/2018/08/sblogo-150x150.jpg';
+            if (item.feedUrl.includes('ifun.de')) return 'https://www.ifun.de/wp-content/themes/ifun/images/ifun_logo.png';
+            
+            return DEFAULT_IMAGE;
+        }
+
+        function stripHtml(html) {
+           const div = document.createElement('div');
+           div.innerHTML = html;
+           return div.textContent || div.innerText || "";
+        }
+
+        function renderArticle(item) {
+            const article = document.createElement('article');
+            article.className = 'article-entry';
+            
+            const imageUrl = extractImage(item);
+            const date = new Date(item.pubDate);
+            const dateStr = !isNaN(date) ? date.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'}) + ' Uhr' : '';
+            
+            let snippet = stripHtml(item.description || item.content);
+            if (snippet.length > 250) snippet = snippet.substring(0, 250) + '...';
+
+            const cacheInfo = item.fromCache ? '⚡' : (item.isFallback ? '🛡️' : '🔄'); 
+
+            article.innerHTML = `
+                <header>
+                    <h2><a href="${item.link}" target="_blank">${item.title}</a></h2>
+                    <div class="article-meta">
+                        <span class="source-badge">${item.source} ${cacheInfo}</span>
+                        <span>${dateStr}</span>
+                    </div>
+                </header>
+                <div class="article-content">
+                    <img src="${imageUrl}" alt="" class="article-image" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}'">
+                    <div class="article-text-wrapper">
+                        <p class="article-text">${snippet}</p>
+                        <a href="${item.link}" target="_blank" class="read-more">Weiterlesen &rarr;</a>
+                    </div>
+                </div>
+            `;
+            return article;
+        }
+
+        async function init() {
+            try {
+                updateInfo.textContent = 'Aktualisiere Feeds...';
+                
+                const promises = RSS_URLS.map(url => fetchFeed(url));
+                const results = await Promise.allSettled(promises);
+                
+                let allArticles = [];
+                let hasNewData = false;
+
+                results.forEach(res => {
+                    if (res.status === 'fulfilled') {
+                        allArticles.push(...res.value);
+                        // Prüfe, ob mindestens ein Feed NICHT aus dem Cache kam (also frisch ist)
+                        if (res.value.length > 0 && !res.value[0].fromCache) {
+                            hasNewData = true;
+                        }
+                    }
+                });
+
+                allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+                
+                container.innerHTML = '';
+                if (allArticles.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; padding: 20px;">Keine Nachrichten geladen.</p>';
+                } else {
+                    allArticles.forEach(item => container.appendChild(renderArticle(item)));
+                }
+
+                // --- Update Zeitstempel Logik ---
+                const now = new Date();
+                const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+                
+                // Wenn wir frische Daten haben, speichern wir den aktuellen Zeitstempel
+                if (hasNewData) {
+                    localStorage.setItem('lastSuccessUpdate', now.toISOString());
+                    updateInfo.textContent = 'Stand: ' + now.toLocaleDateString('de-DE', options) + ' Uhr';
+                } else {
+                    // Wenn alles aus dem Cache kommt, zeigen wir den gespeicherten Zeitstempel an
+                    const lastUpdate = localStorage.getItem('lastSuccessUpdate');
+                    if (lastUpdate) {
+                        const lastDate = new Date(lastUpdate);
+                        updateInfo.textContent = 'Stand: ' + lastDate.toLocaleDateString('de-DE', options) + ' Uhr';
+                    } else {
+                        // Fallback: Wenn noch nie gespeichert wurde, nimm 'Jetzt' (passiert nur beim allerersten Start)
+                         updateInfo.textContent = 'Stand: ' + now.toLocaleDateString('de-DE', options) + ' Uhr';
+                    }
+                }
+
+            } catch (e) {
+                container.innerHTML = `<p style="text-align:center; color:red;">Fehler: ${e.message}</p>`;
+            }
+        }
+
+        init();
+        setInterval(init, 5 * 60 * 1000); 
+
+    </script>
+</body>
+</html>
