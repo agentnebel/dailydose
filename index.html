@@ -158,6 +158,12 @@
             align-items: center;
         }
         
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
         header.main-header h1 {
             margin: 0;
             font-size: 1.8rem;
@@ -175,7 +181,7 @@
             font-weight: 500;
         }
 
-        .theme-toggle {
+        .theme-toggle, .action-btn {
             background: var(--toggle-bg);
             border: none;
             border-radius: 50%;
@@ -190,8 +196,17 @@
             transition: transform 0.2s, background-color 0.3s;
         }
 
-        .theme-toggle:active {
+        .theme-toggle:active, .action-btn:active {
             transform: scale(0.95);
+        }
+        
+        .action-btn.spinning {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         @media (max-width: 600px) {
@@ -215,7 +230,10 @@
                 <h1>Daily Dose for Sven</h1>
                 <div id="last-update"></div>
             </div>
-            <button class="theme-toggle" id="theme-toggle">🌙</button>
+            <div class="header-buttons">
+                <button class="action-btn" id="refresh-btn" title="Feeds aktualisieren">🔄</button>
+                <button class="theme-toggle" id="theme-toggle" title="Dark Mode umschalten">🌙</button>
+            </div>
         </div>
     </header>
 
@@ -251,6 +269,7 @@
         const container = document.getElementById('feed-container');
         const updateInfo = document.getElementById('last-update');
         const themeToggle = document.getElementById('theme-toggle');
+        const refreshBtn = document.getElementById('refresh-btn');
 
         // --- Theme Logic ---
         function initTheme() {
@@ -277,6 +296,70 @@
         }
 
         themeToggle.addEventListener('click', toggleTheme);
+
+        // --- Force Refresh Logic ---
+        function forceRefresh() {
+            refreshBtn.classList.add('spinning');
+            refreshBtn.disabled = true;
+            
+            // Alle Cache-Einträge löschen
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('rss_cache_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Last update zurücksetzen
+            localStorage.removeItem('lastSuccessUpdate');
+            
+            // Container leeren & neu laden
+            container.innerHTML = '<div id="loading" style="text-align: center; color: var(--text-meta); padding: 40px;">Cache gelöscht, lade Feeds neu...</div>';
+            
+            // Kleines Timeout, damit man die Animation kurz sieht (UX)
+            setTimeout(() => {
+                init().then(() => {
+                    refreshBtn.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                }).catch(() => {
+                    refreshBtn.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                });
+            }, 500);
+        }
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', forceRefresh);
+        }
+        
+        // --- Force Refresh Logic ---
+        function forceRefresh() {
+            refreshBtn.classList.add('spinning');
+            refreshBtn.disabled = true;
+            
+            // Alle Cache-Einträge löschen
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('rss_cache_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Last update zurücksetzen
+            localStorage.removeItem('lastSuccessUpdate');
+            
+            // Container leeren & neu laden
+            container.innerHTML = '<div id="loading" style="text-align: center; color: var(--text-meta); padding: 40px;">Cache gelöscht, lade Feeds neu...</div>';
+            
+            // Kleines Timeout, damit man die Animation kurz sieht (UX)
+            setTimeout(() => {
+                init().then(() => {
+                    refreshBtn.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                });
+            }, 500);
+        }
+
+        refreshBtn.addEventListener('click', forceRefresh);
+
         initTheme();
 
         // --- XML Parser Helper für Fallback ---
