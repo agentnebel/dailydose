@@ -2,7 +2,6 @@
 
 > A personal RSS aggregator – all important news at a glance.
 
-**Live:** [dailydose.agentnebel.workers.dev](https://dailydose.agentnebel.workers.dev) (or your Cloudflare URL)
 
 ---
 
