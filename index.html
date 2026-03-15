@@ -146,7 +146,7 @@
             z-index: 1000;
             background: var(--header-bg);
             border-bottom: 1px solid var(--shadow-color); /* Flacher Look mit dezenter Trennlinie */
-            transition: background-color 0.3s ease;
+            transition: transform 0.3s ease, background-color 0.3s ease;
         }
 
         .header-content {
@@ -220,6 +220,16 @@
             header.main-header h1 { font-size: 1.5rem; }
             .theme-toggle { width: 38px; height: 38px; font-size: 1.1rem; }
         }
+        
+        .skeleton {
+            background: linear-gradient(90deg, var(--image-bg) 25%, var(--bg-card) 50%, var(--image-bg) 75%);
+            background-size: 200% 100%;
+            animation: skeletonLoading 1.5s infinite;
+            border-radius: 4px;
+            color: transparent !important;
+            pointer-events: none;
+        }
+        @keyframes skeletonLoading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body>
@@ -557,21 +567,27 @@
             const dateStr = !isNaN(date) ? date.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'}) + ' Uhr' : '';
             
             let snippet = stripHtml(item.description || item.content);
+            
+            // Read time estimation
+            const wordCount = snippet.split(/\s+/).length;
+            const readTime = Math.max(1, Math.ceil(wordCount / 200)) + " Min. Lesezeit";
+
             if (snippet.length > 250) snippet = snippet.substring(0, 250) + '...';
 
             const cacheInfo = item.fromCache ? '⚡' : (item.isFallback ? '🛡️' : '🔄'); 
 
             article.innerHTML = `
-                <header>
-                    <h2><a href="${item.link}" target="_blank">${item.title}</a></h2>
-                    <div class="article-meta">
-                        <span class="source-badge">${item.source} ${cacheInfo}</span>
-                        <span>${dateStr}</span>
-                    </div>
-                </header>
                 <div class="article-content">
                     <img src="${imageUrl}" alt="" class="article-image" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}'">
                     <div class="article-text-wrapper">
+                        <header>
+                            <h2><a href="${item.link}" target="_blank">${item.title}</a></h2>
+                            <div class="article-meta">
+                                <span class="source-badge">${item.source} ${cacheInfo}</span>
+                                <span>${dateStr}</span>
+                                <span style="opacity:0.7">&bull; ⏱️ ${readTime}</span>
+                            </div>
+                        </header>
                         <p class="article-text">${snippet}</p>
                         <a href="${item.link}" target="_blank" class="read-more">Weiterlesen &rarr;</a>
                     </div>
@@ -582,6 +598,12 @@
 
         async function init() {
             try {
+                if (container.innerHTML.trim() === '') {
+                    container.innerHTML = Array(5).fill(`
+                        <article class="article-entry"><div class="article-content">
+                        <div class="article-image skeleton"></div><div class="article-text-wrapper"><h2 class="skeleton">Loading Title Placeholder</h2><p class="skeleton">Loading description text here. We need multiple lines so it looks like a real text block.</p></div></div></article>
+                    `).join('');
+                }
                 updateInfo.textContent = 'Aktualisiere Feeds...';
                 
                 const promises = RSS_URLS.map(url => fetchFeed(url));
@@ -638,6 +660,18 @@
 
         init();
         setInterval(init, 5 * 60 * 1000); 
+
+        // Auto-hide header on scroll (Sheet-Verhalten)
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('.main-header');
+            if (window.scrollY > lastScrollY && window.scrollY > 80) {
+                header.style.transform = 'translateY(-100%)';
+            } else {
+                header.style.transform = 'translateY(0)';
+            }
+            lastScrollY = window.scrollY;
+        }, { passive: true });
 
     </script>
 </body>
