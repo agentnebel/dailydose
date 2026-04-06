@@ -781,7 +781,7 @@
             
             if (data.imageUrl) {
                 const imgNode = article?.querySelector('.article-image');
-                if (imgNode && (imgNode.src.includes('sblogo') || imgNode.src.includes('placeholder') || imgNode.src.includes('tarnkappe'))) {
+                if (imgNode && (imgNode.src.includes('sblogo') || imgNode.src.includes('placeholder'))) {
                     imgNode.src = data.imageUrl;
                 }
             }
@@ -793,7 +793,7 @@
             let finalImageUrl = cachedEntry?.imageUrl || null;
             
             const currentImg = extractImage(item);
-            const needsImage = !finalImageUrl && (currentImg.includes('sblogo') || currentImg.includes('placeholder') || currentImg.includes('tarnkappe.info/wp-content/uploads/cropped-favicon'));
+            const needsImage = !finalImageUrl && (currentImg.includes('sblogo') || currentImg.includes('placeholder'));
             
             let needsFetch = !finalReadTime || needsImage;
 
