@@ -314,28 +314,63 @@
             refreshBtn.classList.add('spinning');
             refreshBtn.disabled = true;
             
+            // Alle Cache-Einträge löschen
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('rss_cache_')) {
                     localStorage.removeItem(key);
                 }
             });
             
+            // Last update zurücksetzen
             localStorage.removeItem('lastSuccessUpdate');
+            
+            // Container leeren & neu laden
             container.innerHTML = '<div id="loading" style="text-align: center; color: var(--text-meta); padding: 40px;">Cache gelöscht, lade Feeds neu...</div>';
             
+            // Kleines Timeout, damit man die Animation kurz sieht (UX)
             setTimeout(() => {
-                init()
-                    .catch(() => {})
-                    .finally(() => {
-                        refreshBtn.classList.remove('spinning');
-                        refreshBtn.disabled = false;
-                    });
+                init().then(() => {
+                    refreshBtn.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                }).catch(() => {
+                    refreshBtn.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                });
             }, 500);
         }
 
         if (refreshBtn) {
             refreshBtn.addEventListener('click', forceRefresh);
         }
+        
+        // --- Force Refresh Logic ---
+        function forceRefresh() {
+            refreshBtn.classList.add('spinning');
+            refreshBtn.disabled = true;
+            
+            // Alle Cache-Einträge löschen
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('rss_cache_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Last update zurücksetzen
+            localStorage.removeItem('lastSuccessUpdate');
+            
+            // Container leeren & neu laden
+            container.innerHTML = '<div id="loading" style="text-align: center; color: var(--text-meta); padding: 40px;">Cache gelöscht, lade Feeds neu...</div>';
+            
+            // Kleines Timeout, damit man die Animation kurz sieht (UX)
+            setTimeout(() => {
+                init().then(() => {
+                    refreshBtn.classList.remove('spinning');
+                    refreshBtn.disabled = false;
+                });
+            }, 500);
+        }
+
+        refreshBtn.addEventListener('click', forceRefresh);
 
         initTheme();
 
