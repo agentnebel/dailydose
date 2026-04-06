@@ -558,110 +558,6 @@
            return div.textContent || div.innerText || "";
         }
 
-        function normalizeReadTime(value) {
-            if (!value) return null;
-
-            const text = String(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-            if (!text) return null;
-
-            const isoDurationMatch = text.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i);
-            if (isoDurationMatch) {
-                const hours = parseInt(isoDurationMatch[1] || '0', 10);
-                const mins = parseInt(isoDurationMatch[2] || '0', 10);
-                const minutes = Math.max(1, hours * 60 + mins);
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            const minMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:min(?:ute[n]?)?|lesezeit|read(?:ing)?\s*time)/i);
-            if (minMatch) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(minMatch[1].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            const numberOnly = text.match(/^\d+(?:[\.,]\d+)?$/);
-            if (numberOnly) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(numberOnly[0].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            return null;
-        }
-
-        function extractReadTimeFromHtml(html) {
-            if (!html) return null;
-
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const selectors = [
-                '[class*="read-time"]',
-                '[class*="reading-time"]',
-                '[class*="readingtime"]',
-                '[class*="dauer"]',
-                '[class*="lesezeit"]',
-                '[itemprop="timeRequired"]',
-                'meta[itemprop="timeRequired"]',
-                'meta[name="twitter:data1"]',
-                'meta[property="article:reading_time"]'
-            ];
-
-            for (const selector of selectors) {
-                const elements = doc.querySelectorAll(selector);
-                for (const el of elements) {
-                    const candidate = normalizeReadTime(el.getAttribute('content') || el.textContent);
-                    if (candidate) return candidate;
-                }
-            }
-
-            const metaPairs = Array.from(doc.querySelectorAll('meta[name], meta[property]'));
-            for (let i = 0; i < metaPairs.length; i += 1) {
-                const name = (metaPairs[i].getAttribute('name') || metaPairs[i].getAttribute('property') || '').toLowerCase();
-                const content = metaPairs[i].getAttribute('content') || '';
-                if (content.toLowerCase().includes('read') || content.toLowerCase().includes('lese')) {
-                    const next = metaPairs[i + 1]?.getAttribute('content') || '';
-                    const candidate = normalizeReadTime(next);
-                    if (candidate) return candidate;
-                }
-                if (name.includes('timerequired') || name.includes('reading_time')) {
-                    const candidate = normalizeReadTime(content);
-                    if (candidate) return candidate;
-                }
-            }
-
-            const fullText = stripHtml(html);
-            const textMatch = fullText.match(/(?:Lesezeit|Lesedauer|Reading Time|Read Time)\s*[:\-]?\s*(\d+(?:[\.,]\d+)?)\s*(?:Min(?:ute[n]?)?)?/i);
-            if (textMatch) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(textMatch[1].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            return null;
-        }
-
-        function getReadTime(item, plainTextSnippet) {
-            const directCandidates = [
-                item.readTime,
-                item.read_time,
-                item.readingTime,
-                item.reading_time,
-                item.timeRequired,
-                item.time_required
-            ];
-
-            for (const candidate of directCandidates) {
-                const normalized = normalizeReadTime(candidate);
-                if (normalized) return normalized;
-            }
-
-            const htmlCandidates = [item.content, item.description];
-            for (const html of htmlCandidates) {
-                const extracted = extractReadTimeFromHtml(html);
-                if (extracted) return extracted;
-            }
-
-            const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
-            return `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
-        }
-
         function renderArticle(item) {
             const article = document.createElement('article');
             article.className = 'article-entry';
@@ -671,7 +567,10 @@
             const dateStr = !isNaN(date) ? date.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'}) + ' Uhr' : '';
             
             let snippet = stripHtml(item.description || item.content);
-            const readTime = getReadTime(item, snippet);
+            
+            // Read time estimation
+            const wordCount = snippet.split(/\s+/).length;
+            const readTime = Math.max(1, Math.ceil(wordCount / 200)) + " Min. Lesezeit";
 
             if (snippet.length > 250) snippet = snippet.substring(0, 250) + '...';
 
