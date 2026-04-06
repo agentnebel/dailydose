@@ -2,199 +2,138 @@
 
 > A personal RSS aggregator – all important news at a glance.
 
-
----
-
 ## What is Daily Dose?
 
-**Daily Dose** is a lean, self-hosted RSS reader that bundles my favorite feeds for tech, photography, Bitcoin & more in one place. Instead of jumping through dozens of sites, get the latest articles compact and clearly presented.
+**Daily Dose** is a lean, self-hosted RSS reader that bundles favorite feeds for tech, photography, Bitcoin & more in one place. It stays intentionally simple in the UI, while the internals now handle feed caching, article metadata hydration, image fallbacks, and source-specific fixes more robustly.
 
-### Why this project?
-
-- **No tracking** – No Google, no algorithm telling me what to read
-- **Self-determined** – I decide which sources I see
-- **Fast** – Loads feeds once per hour, caches locally
-- **Papernice** – Responsive design, Dark Mode, mobile-first
-
----
-
-## Features
+## Current Features
 
 | Feature | Description |
 |---------|-------------|
 | 🌓 **Dark Mode** | Automatic or manual toggle, persists in browser |
-| 🔄 **Force Refresh** | Clears cache and reloads all feeds (with spinning animation) |
+| 🔄 **Force Refresh** | Clears feed caches and reloads feeds |
 | 📱 **Mobile-optimized** | Fixed header, touch-friendly, responsive layout |
-| 💾 **Smart Caching** | 1-hour cache via localStorage, saves API requests |
-| 🖼️ **Image Preview** | Extracts Open Graph images from feeds |
+| 💾 **Feed Cache** | 1-hour cache for feed payloads via localStorage |
+| 🧠 **Article Meta Cache** | Separate cache for article-level read times + hydrated images |
+| 🖼️ **Image Preview** | Feed image extraction plus background hydration from article pages |
+| ⏱️ **Read Time Detection** | Source metadata detection with controlled fallback behavior |
+| 🚦 **Hydration Queue** | Limits background article fetches to avoid flooding the browser |
 | 🏷️ **Source Badges** | Recognize the source at a glance |
-| 🚀 **Lightweight** | Vanilla JS, no frameworks, < 30KB minified |
-
----
+| 🚀 **Lightweight UI** | Still a single static page with no framework |
 
 ## Tech Stack
 
-```
+```text
 Frontend:     Vanilla HTML5 + CSS3 + ES6 JavaScript
-Styling:      CSS Custom Properties (Variables), Flexbox, Grid
-Hosting:      Cloudflare Workers / Pages (static assets)
-Build:        None needed – pure HTML file
-API:          rss2json.com (RSS → JSON conversion)
+Styling:      CSS Custom Properties, Flexbox
+Hosting:      Cloudflare Pages / static hosting
+Build:        None required
+Feed Source:  rss2json.com (primary)
+Fallback:     XML fetch + in-browser parser via AllOrigins
 ```
 
----
-
-## RSS Feeds
-
-Currently subscribed sources:
-
-| Source | Category | URL |
-|--------|----------|-----|
-| **Blocktrainer** | Bitcoin & Crypto | `blocktrainer.de/feed` |
-| **PetaPixel** | Photography News | `petapixel.com/feed` |
-| **iFun.de** | Apple & Tech | `ifun.de/feed` |
-| **stadt-bremerhaven.de** | Regional & Tech | `stadt-bremerhaven.de/feed` |
-| **Streetletter** | Street Photography | `streetletter.substack.com/feed` |
-| **UP Photographers** | Photography Portfolio | `upphotographers.com/feed` |
-| **eortizfoto** | Photography Blog | Substack |
-| **Tarnkappe.info** | Tech & Privacy | `tarnkappe.info/feed` |
-| **Kuketz-Blog** | Privacy | `kuketz-blog.de/feed` |
-
-> Note: Feeds are fetched via RSS standard (XML → JSON → Rendered HTML).
-
----
-
-## Local Development
-
-Since this is a static HTML file, no complex setup is needed:
-
-```bash
-# Clone repository
-git clone <repo-url>
-cd dailydose
-
-# Start local server (e.g., with Python)
-python3 -m http.server 8000
-
-# Or with Node.js
-npx serve .
-
-# Or simply open index.html in browser
-open index.html
-```
-
-**Important:** For RSS fetching, an API key is required (rss2json). This is hardcoded in the source – for production use, it should be stored server-side for security (Workers Secrets).
-
----
-
-## Deployment
-
-### Cloudflare Workers / Pages
-
-1. **Install Wrangler CLI:**
-   ```bash
-   npm install -g wrangler
-   ```
-
-2. **Login to Cloudflare:**
-   ```bash
-   wrangler login
-   ```
-
-3. **Deploy:**
-   ```bash
-   wrangler deploy
-   ```
-
-The `wrangler.jsonc` is already configured for static asset hosting.
-
-### GitHub Actions (Automated Deployment)
-
-Optional: Automatically deploy on every push to `main`:
-
-```yaml
-# .github/workflows/deploy.yml (Example)
-name: Deploy to Cloudflare
-on:
-  push:
-    branches: [main]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-```
-
----
-
-## Architecture & Cache Strategy
+## Architecture
 
 ### Data Flow
 
+```text
+RSS Feed
+  ↓
+rss2json API (primary)
+  ↓
+Feed Cache (localStorage)
+  ↓
+Initial Render
+  ↓
+Background Article Hydration Queue
+  ↓
+Article Meta Cache (readTime + imageUrl)
+  ↓
+Live DOM updates
 ```
-RSS Feed (XML)
-      ↓
-rss2json API
-      ↓
-JSON Response
-      ↓
-localStorage (1h Cache)
-      ↓
-Rendered Article Cards
+
+### Cache Model
+
+Daily Dose now uses two separate browser caches:
+
+- `feed_cache_*` → raw feed/API responses
+- `article_meta_cache_*` → hydrated article metadata like:
+  - `readTime`
+  - `imageUrl`
+  - `quality`
+
+This keeps feed refresh behavior separate from article-specific enrichment.
+
+## Source Handling
+
+The app includes source-specific fallbacks where feeds are known to omit proper images or metadata.
+
+Examples:
+- **stadt-bremerhaven.de** → hydrate article image from `og:image`
+- **tarnkappe.info** → replace favicon-style fallback with article image
+- **ifun.de / petapixel.com** → source-specific image fallbacks
+
+## Local Development
+
+```bash
+git clone <repo-url>
+cd dailydose
+python3 -m http.server 8000
 ```
 
-### Fallback Mechanism
+Then open:
 
-If the rss2json API fails or CORS issues occur:
-1. **Primary:** rss2json API (direct, JSON)
-2. **Fallback:** CORS Proxy (corsproxy.io)
-3. **Emergency:** Local XML parser in browser
+```text
+http://localhost:8000
+```
 
----
+## Deployment
+
+### Cloudflare Pages / static hosting
+
+Because this project is still fully static, deployment stays simple.
+
+### Notes
+
+- The rss2json API key is currently client-side in the HTML.
+- For a cleaner production setup, this should eventually move behind a Worker or backend proxy.
 
 ## Project Structure
 
-```
+```text
 dailydose/
-├── index.html          ← Main application (HTML + CSS + JS)
-├── wrangler.jsonc      ← Cloudflare Workers Config
-├── .gitignore          ← Ignores .wrangler, .env
-└── README.md           ← This file
+├── index.html
+├── wrangler.jsonc
+├── README.md
+└── .gitignore
 ```
 
-> **KISS Principle:** A single HTML file. No bundler, no framework, no dependencies.
+## Improvement Status
 
----
+Implemented internal improvements:
 
-## Roadmap / Ideas
+- [x] separated feed cache from article metadata cache
+- [x] centralized source strategies
+- [x] hydration queue with limited parallelism
+- [x] unified proxy/fallback logic
+- [x] more robust read-time handling
+- [x] more robust article image hydration
+- [x] repo cleanup preparation
+- [x] README updated to match current behavior
 
-- [ ] PWA support (Service Worker, offline mode)
-- [ ] Custom feed categories/filtering
-- [ ] Search function across all articles
-- [ ] Favorites/bookmarks saving
-- [ ] Push notifications for breaking news
-- [ ] Multi-user support (personal feed lists)
+## Roadmap
 
----
+Potential next steps:
 
-## Credits
-
-- **Idea & Development:** Sven Belz
-- **RSS API:** [rss2json.com](https://rss2json.com)
-- **CORS Proxy:** [corsproxy.io](https://corsproxy.io)
-- **Icons:** Native Emoji (no icon library needed)
-
----
+- [ ] move JavaScript into `app.js`
+- [ ] move CSS into `styles.css`
+- [ ] replace client-side API key with Worker proxy
+- [ ] add search/filtering
+- [ ] add PWA support
+- [ ] add persistent favorites/bookmarks
 
 ## License
 
 Personal project – no commercial redistribution intended.
 
----
-
 > *"Less is more. No distractions, no algorithms, just the news I want."* – Sven
-
-🌫️ Built with ☕ and minimalism.

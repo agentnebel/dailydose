@@ -19,7 +19,6 @@
             --toggle-icon: #555;
         }
 
-        /* Expliziter Selektor für Dark Mode mit höherer Spezifität (Fix) */
         html[data-theme="dark"] {
             --bg-body: #121212;
             --bg-card: #1e1e1e;
@@ -33,8 +32,7 @@
             --toggle-bg: #333;
             --toggle-icon: #fbbf24;
         }
-        
-        /* Sicherstellen, dass body die Farbe auch wirklich annimmt */
+
         html, body {
             background-color: var(--bg-body);
             color: var(--text-main);
@@ -48,7 +46,7 @@
             max-width: 900px;
             margin: 0 auto;
             padding: 15px;
-            padding-top: 120px; /* Platz für fixierten Header angepasst */
+            padding-top: 120px;
             line-height: 1.6;
             background-color: var(--bg-body);
             transition: background-color 0.3s ease, color 0.3s ease;
@@ -66,7 +64,10 @@
             overflow: hidden;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         .article-entry h2 {
             margin: 0 0 8px 0;
@@ -89,7 +90,7 @@
             gap: 8px;
             flex-wrap: wrap;
         }
-        
+
         .source-badge {
             background: var(--image-bg);
             padding: 2px 8px;
@@ -114,7 +115,10 @@
             background-color: var(--image-bg);
         }
 
-        .article-text-wrapper { flex: 1; min-width: 0; }
+        .article-text-wrapper {
+            flex: 1;
+            min-width: 0;
+        }
 
         .article-text {
             margin: 0 0 12px 0;
@@ -137,7 +141,6 @@
             padding: 5px 0;
         }
 
-        /* --- NEUES HEADER DESIGN --- */
         header.main-header {
             position: fixed;
             top: 0;
@@ -145,7 +148,7 @@
             right: 0;
             z-index: 1000;
             background: var(--header-bg);
-            border-bottom: 1px solid var(--shadow-color); /* Flacher Look mit dezenter Trennlinie */
+            border-bottom: 1px solid var(--shadow-color);
             transition: transform 0.3s ease, background-color 0.3s ease;
         }
 
@@ -157,19 +160,19 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .header-buttons {
             display: flex;
             gap: 10px;
             align-items: center;
         }
-        
+
         header.main-header h1 {
             margin: 0;
             font-size: 1.8rem;
             font-weight: 800;
             letter-spacing: -0.5px;
-            background: linear-gradient(90deg, #007aff, #00c6ff); /* Farbverlauf */
+            background: linear-gradient(90deg, #007aff, #00c6ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -199,28 +202,26 @@
         .theme-toggle:active, .action-btn:active {
             transform: scale(0.95);
         }
-        
+
         .action-btn.spinning {
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
 
         @media (max-width: 600px) {
-            body { padding: 10px; padding-top: 95px; } /* Angepasst für neuen Header */
+            body { padding: 10px; padding-top: 95px; }
             .article-content { flex-direction: column; gap: 12px; }
             .article-image { width: 100%; height: 200px; max-height: 250px; }
             .article-entry h2 { font-size: 1.2rem; }
-            
-            /* Responsive Anpassungen für neuen Header */
             .header-content { padding: 12px 15px; }
             header.main-header h1 { font-size: 1.5rem; }
             .theme-toggle { width: 38px; height: 38px; font-size: 1.1rem; }
         }
-        
+
         .skeleton {
             background: linear-gradient(90deg, var(--image-bg) 25%, var(--bg-card) 50%, var(--image-bg) 75%);
             background-size: 200% 100%;
@@ -229,11 +230,14 @@
             color: transparent !important;
             pointer-events: none;
         }
-        @keyframes skeletonLoading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        @keyframes skeletonLoading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
     </style>
 </head>
 <body>
-
     <header class="main-header">
         <div class="header-content">
             <div>
@@ -254,37 +258,151 @@
     </div>
 
     <script>
-        const RSS_URLS = [
-            'https://www.blocktrainer.de/feed',
-            'https://petapixel.com/feed',
-            'https://www.ifun.de/feed',
-            'https://stadt-bremerhaven.de/feed',
-            'https://streetletter.substack.com/feed',
-            'https://upphotographers.com/feed',
-            'https://eortizfoto.substack.com/feed',
-            'https://tarnkappe.info/feed/',
-            'https://www.kuketz-blog.de/feed/',
-            'https://www.heise.de/thema/Kuenstliche-Intelligenz.xml',
-            'https://rss.golem.de/rss.php?feed=RSS2.0&ms=llm'
+        const CONFIG = {
+            rssUrls: [
+                'https://www.blocktrainer.de/feed',
+                'https://petapixel.com/feed',
+                'https://www.ifun.de/feed',
+                'https://stadt-bremerhaven.de/feed',
+                'https://streetletter.substack.com/feed',
+                'https://upphotographers.com/feed',
+                'https://eortizfoto.substack.com/feed',
+                'https://tarnkappe.info/feed/',
+                'https://www.kuketz-blog.de/feed/',
+                'https://www.heise.de/thema/Kuenstliche-Intelligenz.xml',
+                'https://rss.golem.de/rss.php?feed=RSS2.0&ms=llm'
+            ],
+            apiKey: 'l42es2jwwhkaq8xn72z4ogwjrx2zepbbecqh4gfc',
+            apiBase: 'https://api.rss2json.com/v1/api.json?rss_url=',
+            xmlProxy: 'https://api.allorigins.win/get?url=',
+            cacheDurationMs: 60 * 60 * 1000,
+            articleMetaCacheDurationMs: 7 * 24 * 60 * 60 * 1000,
+            hydrateConcurrency: 3,
+            defaultImage: 'https://via.placeholder.com/280x180/e0e0e0/999999?text=News'
+        };
+
+        const SITE_STRATEGIES = [
+            {
+                match: (item) => item.feedUrl?.includes('stadt-bremerhaven.de'),
+                fallbackImage: 'https://stadt-bremerhaven.de/wp-content/uploads/2018/08/sblogo-150x150.jpg',
+                hydrateImageWhen: (src) => src.includes('sblogo') || src.includes('placeholder')
+            },
+            {
+                match: (item) => item.feedUrl?.includes('tarnkappe.info'),
+                fallbackImage: 'https://cdn.tarnkappe.info/wp-content/uploads/cropped-favicon-black-quad-2.png',
+                hydrateImageWhen: (src) => src.includes('tarnkappe') || src.includes('placeholder')
+            },
+            {
+                match: (item) => item.feedUrl?.includes('ifun.de'),
+                fallbackImage: 'https://www.ifun.de/wp-content/themes/ifun/images/ifun_logo.png'
+            },
+            {
+                match: (item) => item.feedUrl?.includes('petapixel.com'),
+                fallbackImage: 'https://cdn.petapixel.com/assets/assets/images/logos/petapixel-logo.png'
+            }
         ];
 
-        // API Konfiguration
-        const API_KEY = 'l42es2jwwhkaq8xn72z4ogwjrx2zepbbecqh4gfc';
-        const API_BASE = 'https://api.rss2json.com/v1/api.json?rss_url=';
-        const CORS_PROXY = 'https://corsproxy.io/?'; // Fallback
-        
-        // Cache Konfiguration (1 Stunde = 3600000 ms)
-        const CACHE_DURATION = 60 * 60 * 1000; 
-        const READ_TIME_CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
-        
-        const DEFAULT_IMAGE = 'https://via.placeholder.com/280x180/e0e0e0/999999?text=News';
+        const Cache = {
+            feedKey(url) {
+                return `feed_cache_${url}`;
+            },
+            articleMetaKey(link) {
+                if (!link) return null;
+                const cleanLink = link.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                return `article_meta_cache_${cleanLink}`;
+            },
+            getFeed(url) {
+                try {
+                    const cached = localStorage.getItem(this.feedKey(url));
+                    if (!cached) return null;
+                    const parsed = JSON.parse(cached);
+                    if ((Date.now() - parsed.timestamp) > CONFIG.cacheDurationMs) {
+                        localStorage.removeItem(this.feedKey(url));
+                        return null;
+                    }
+                    return parsed.data;
+                } catch {
+                    return null;
+                }
+            },
+            setFeed(url, data) {
+                try {
+                    localStorage.setItem(this.feedKey(url), JSON.stringify({
+                        timestamp: Date.now(),
+                        data
+                    }));
+                } catch (e) {
+                    console.warn('Feed cache full?', e);
+                }
+            },
+            getArticleMeta(link) {
+                const key = this.articleMetaKey(link);
+                if (!key) return null;
+                try {
+                    const cached = localStorage.getItem(key);
+                    if (!cached) return null;
+                    const parsed = JSON.parse(cached);
+                    if ((Date.now() - parsed.timestamp) > CONFIG.articleMetaCacheDurationMs) {
+                        localStorage.removeItem(key);
+                        return null;
+                    }
+                    return parsed.data || null;
+                } catch {
+                    return null;
+                }
+            },
+            setArticleMeta(link, data) {
+                const key = this.articleMetaKey(link);
+                if (!key) return;
+                try {
+                    localStorage.setItem(key, JSON.stringify({
+                        timestamp: Date.now(),
+                        data
+                    }));
+                } catch (e) {
+                    console.warn('Article meta cache full?', e);
+                }
+            },
+            clearFeedCaches() {
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('feed_cache_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+            }
+        };
 
         const container = document.getElementById('feed-container');
         const updateInfo = document.getElementById('last-update');
         const themeToggle = document.getElementById('theme-toggle');
         const refreshBtn = document.getElementById('refresh-btn');
 
-        // --- Theme Logic ---
+        const HydrationQueue = {
+            queue: [],
+            running: 0,
+            enqueue(task) {
+                this.queue.push(task);
+                this.pump();
+            },
+            pump() {
+                while (this.running < CONFIG.hydrateConcurrency && this.queue.length > 0) {
+                    const task = this.queue.shift();
+                    this.running += 1;
+                    Promise.resolve()
+                        .then(task)
+                        .catch(() => {})
+                        .finally(() => {
+                            this.running -= 1;
+                            this.pump();
+                        });
+                }
+            }
+        };
+
+        function getSiteStrategy(item) {
+            return SITE_STRATEGIES.find(strategy => strategy.match(item)) || null;
+        }
+
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme) {
@@ -308,66 +426,39 @@
             themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
         }
 
-        themeToggle.addEventListener('click', toggleTheme);
-
-        // --- Force Refresh Logic ---
-        function forceRefresh() {
-            refreshBtn.classList.add('spinning');
-            refreshBtn.disabled = true;
-            
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('rss_cache_')) {
-                    localStorage.removeItem(key);
-                }
-            });
-            
-            localStorage.removeItem('lastSuccessUpdate');
-            container.innerHTML = '<div id="loading" style="text-align: center; color: var(--text-meta); padding: 40px;">Cache gelöscht, lade Feeds neu...</div>';
-            
-            setTimeout(() => {
-                init()
-                    .catch(() => {})
-                    .finally(() => {
-                        refreshBtn.classList.remove('spinning');
-                        refreshBtn.disabled = false;
-                    });
-            }, 500);
+        async function fetchViaAllOrigins(url, responseType = 'text') {
+            const proxyUrl = `${CONFIG.xmlProxy}${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('Proxy fetch failed');
+            const json = await response.json();
+            const contents = json.contents || '';
+            return responseType === 'json' ? JSON.parse(contents) : contents;
         }
 
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', forceRefresh);
-        }
-
-        initTheme();
-
-        // --- XML Parser Helper für Fallback ---
         function parseXMLFeed(xmlText, feedUrl) {
             const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-            
-            const channel = xmlDoc.querySelector("channel");
-            const feedTitle = channel.querySelector("title").textContent;
-            
-            const items = Array.from(xmlDoc.querySelectorAll("item"));
-            const parsedItems = items.map(item => {
-                const title = item.querySelector("title")?.textContent || "Kein Titel";
-                const link = item.querySelector("link")?.textContent || "#";
-                const pubDate = item.querySelector("pubDate")?.textContent || new Date().toISOString();
-                const description = item.querySelector("description")?.textContent || "";
-                const content = item.querySelector("encoded")?.textContent || description; 
-                
-                const enclosure = item.querySelector("enclosure");
-                const enclosureLink = enclosure ? enclosure.getAttribute("url") : null;
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            const channel = xmlDoc.querySelector('channel');
+            const feedTitle = channel?.querySelector('title')?.textContent || feedUrl;
+
+            const items = Array.from(xmlDoc.querySelectorAll('item')).map(item => {
+                const title = item.querySelector('title')?.textContent || 'Kein Titel';
+                const link = item.querySelector('link')?.textContent || '#';
+                const pubDate = item.querySelector('pubDate')?.textContent || new Date().toISOString();
+                const description = item.querySelector('description')?.textContent || '';
+                const content = item.querySelector('encoded')?.textContent || description;
+                const enclosure = item.querySelector('enclosure');
+                const enclosureLink = enclosure ? enclosure.getAttribute('url') : null;
 
                 return {
-                    title: title,
-                    link: link,
-                    pubDate: pubDate,
-                    description: description,
-                    content: content,
+                    title,
+                    link,
+                    pubDate,
+                    description,
+                    content,
                     enclosure: { link: enclosureLink },
                     source: feedTitle,
-                    feedUrl: feedUrl,
+                    feedUrl,
                     fromCache: false,
                     isFallback: true
                 };
@@ -376,276 +467,80 @@
             return {
                 status: 'ok',
                 feed: { title: feedTitle, url: feedUrl },
-                items: parsedItems
+                items
             };
         }
 
-        // --- Smart Feed Logic (Cache + API + Fallback) ---
         async function fetchFeed(url) {
-            const cacheKey = 'rss_cache_' + url;
-            
-            // 1. Prüfen, ob wir gültige Daten im Cache haben
-            try {
-                const cached = localStorage.getItem(cacheKey);
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    const age = Date.now() - parsed.timestamp;
-                    
-                    if (age < CACHE_DURATION) {
-                        return parsed.data.items.map(item => ({
-                            ...item, 
-                            source: parsed.data.feed.title, 
-                            feedUrl: url,
-                            fromCache: true 
-                        }));
-                    }
-                }
-            } catch (e) {
-                console.error("Cache Read Error", e);
+            const cached = Cache.getFeed(url);
+            if (cached) {
+                return cached.items.map(item => ({
+                    ...item,
+                    source: cached.feed.title,
+                    feedUrl: url,
+                    fromCache: true
+                }));
             }
 
-            // 2. Versuch: Primäre API (rss2json)
             try {
-                const apiUrl = `${API_BASE}${encodeURIComponent(url)}&api_key=${API_KEY}`;
-                
+                const apiUrl = `${CONFIG.apiBase}${encodeURIComponent(url)}&api_key=${CONFIG.apiKey}`;
                 const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error("Primary API failed");
-                
+                if (!response.ok) throw new Error('Primary API failed');
                 const data = await response.json();
-                
-                if (data.status === 'ok') {
-                    saveToCache(cacheKey, data);
-                    return data.items.map(item => ({
-                        ...item, 
-                        source: data.feed.title, 
-                        feedUrl: url,
-                        fromCache: false
-                    }));
-                } else {
-                    throw new Error("API returned error status");
-                }
-            } catch (e) {
-                console.warn(`[API Primary] Fehler bei ${url}:`, e);
-                
-                // 3. Versuch: Fallback Proxy (corsproxy.io)
+                if (data.status !== 'ok') throw new Error('API returned error status');
+
+                Cache.setFeed(url, data);
+                return data.items.map(item => ({
+                    ...item,
+                    source: data.feed.title,
+                    feedUrl: url,
+                    fromCache: false
+                }));
+            } catch (primaryError) {
                 try {
-                    console.log(`[API Fallback] Versuche Proxy für: ${url}`);
-                    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
-                    
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok) throw new Error("Fallback Proxy failed");
-                    
-                    const xmlText = await response.text();
+                    const xmlText = await fetchViaAllOrigins(url, 'text');
                     const data = parseXMLFeed(xmlText, url);
-                    
-                    if (data.status === 'ok') {
-                        saveToCache(cacheKey, data);
-                        return data.items;
-                    }
+                    Cache.setFeed(url, data);
+                    return data.items;
                 } catch (fallbackError) {
-                    console.error(`[API Fallback] Auch fehlgeschlagen für ${url}:`, fallbackError);
-                    
-                    // Letzter Rettungsanker: Alter Cache
-                    const cached = localStorage.getItem(cacheKey);
-                    if (cached) {
-                        const parsed = JSON.parse(cached);
-                        return parsed.data.items.map(item => ({...item, source: parsed.data.feed.title, feedUrl: url, fromCache: true, isStale: true}));
-                    }
+                    console.error(`[Feed Fetch] Failed for ${url}:`, fallbackError);
+                    return [];
                 }
-                return [];
             }
         }
 
-        function saveToCache(key, data) {
-            try {
-                localStorage.setItem(key, JSON.stringify({
-                    timestamp: Date.now(),
-                    data: data
-                }));
-            } catch (e) { console.warn("Cache Full?", e); }
-        }
-
-        function getReadTimeCacheKey(item) {
-            if (!item.link) return null;
-            const cleanLink = item.link.replace(/^https?:\/\//, '').replace(/\/$/, '');
-            return `read_time_cache_${cleanLink}`;
-        }
-
-        function getLegacyReadTimeCacheKey(item) {
-            return item.link ? `read_time_cache_${item.link}` : null;
-        }
-
-        function getCachedReadTimeEntry(item) {
-            const keys = [getReadTimeCacheKey(item), getLegacyReadTimeCacheKey(item)].filter(Boolean);
-
-            for (const key of keys) {
-                try {
-                    const cached = localStorage.getItem(key);
-                    if (!cached) continue;
-
-                    const parsed = JSON.parse(cached);
-                    const age = Date.now() - parsed.timestamp;
-                    if (age > READ_TIME_CACHE_DURATION) {
-                        localStorage.removeItem(key);
-                        continue;
-                    }
-
-                    if (parsed.value || parsed.imageUrl) {
-                        return {
-                            key,
-                            value: parsed.value,
-                            quality: parsed.quality || 'fallback',
-                            imageUrl: parsed.imageUrl
-                        };
-                    }
-                } catch (e) {
-                    continue;
-                }
-            }
-
-            return null;
-        }
-
-        function saveReadTime(item, value, quality = 'source', imageUrl = null) {
-            if (!value && !imageUrl) return;
-
-            const cacheKey = getReadTimeCacheKey(item);
-            const existing = getCachedReadTimeEntry(item);
-            
-            // Preserve existing imageUrl if we're only updating readTime
-            const finalImageUrl = imageUrl || existing?.imageUrl || null;
-
-            const nextQualityRank = quality === 'source' ? 2 : 1;
-            const existingQualityRank = existing?.quality === 'source' ? 2 : (existing?.quality === 'fallback' ? 1 : 0);
-
-            let finalValue = value;
-            if (existing && existingQualityRank > nextQualityRank) {
-                finalValue = existing.value;
-            } else if (existing && existingQualityRank === nextQualityRank) {
-                const existingMinutes = parseInt(existing.value, 10) || 0;
-                const nextMinutes = parseInt(value, 10) || 0;
-                if (existingMinutes > nextMinutes) {
-                    finalValue = existing.value;
-                }
-            }
-
-            try {
-                localStorage.setItem(cacheKey, JSON.stringify({
-                    timestamp: Date.now(),
-                    value: finalValue,
-                    quality,
-                    imageUrl: finalImageUrl
-                }));
-
-                const legacyKey = getLegacyReadTimeCacheKey(item);
-                if (legacyKey && legacyKey !== cacheKey) {
-                    localStorage.removeItem(legacyKey);
-                }
-            } catch (e) {
-                console.warn('Read time cache full?', e);
-            }
-
-            return value;
-        }
-
-        function extractImage(item) {
-            if (item.thumbnail && !item.thumbnail.match(/\.(mp3|wav|m4a|mp4)$/i)) {
-                return item.thumbnail;
-            }
-            // Prioritize enclosure link if it's an image and not audio/video
-            if (item.enclosure && item.enclosure.link && !item.enclosure.link.match(/\.(mp3|wav|m4a|mp4)$/i)) {
-                return item.enclosure.link;
-            }
-            // If no enclosure, try to find an image in the content/description
-            const htmlContent = item.content || item.description || "";
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlContent, 'text/html');
-            
-            // Look for a prominent image, prioritize larger ones
-            let prominentImage = null;
-            const images = doc.querySelectorAll('img');
-            for (const img of images) {
-                let src = img.getAttribute('src');
-                if (!src) continue;
-
-                // Resolve relative URLs
-                if (src.startsWith('/') && item.feedUrl) {
-                    try {
-                        const urlObj = new URL(item.feedUrl);
-                        src = urlObj.origin + src;
-                    } catch (e) { /* Ignore potential URL parsing errors */ }
-                }
-
-                // Skip common tracking/UI elements or tiny images
-                if (src.includes('vgwort.de') || src.includes('met.vgwort') || src.includes('s.w.org/images/core/emoji') || src.includes('1x1.png')) continue;
-                
-                // Try to get image dimensions if available
-                const width = parseInt(img.getAttribute('width')) || 0;
-                const height = parseInt(img.getAttribute('height')) || 0;
-
-                // Prioritize images that look like actual content images (e.g., larger dimensions or specific domains)
-                if (width > 100 || height > 100 || item.feedUrl.includes('stadt-bremerhaven.de') || item.feedUrl.includes('petapixel.com')) { 
-                    prominentImage = src;
-                    break; // Found a good candidate, assume it's the main image
-                }
-                // If no large image found yet, keep the first valid src as a fallback
-                if (!prominentImage && src) {
-                    prominentImage = src;
-                }
-            }
-
-            if (prominentImage) return prominentImage;
-
-            // Fallbacks for specific sites if no image found in content
-            if (item.feedUrl.includes('stadt-bremerhaven.de')) return 'https://stadt-bremerhaven.de/wp-content/uploads/2018/08/sblogo-150x150.jpg';
-            if (item.feedUrl.includes('ifun.de')) return 'https://www.ifun.de/wp-content/themes/ifun/images/ifun_logo.png';
-            if (item.feedUrl.includes('petapixel.com')) return 'https://cdn.petapixel.com/assets/assets/images/logos/petapixel-logo.png';
-            if (item.feedUrl.includes('tarnkappe.info')) return 'https://cdn.tarnkappe.info/wp-content/uploads/cropped-favicon-black-quad-2.png'; // Added fallback for tarnkappe
-
-            return DEFAULT_IMAGE;
-        }
         function stripHtml(html) {
-           const div = document.createElement('div');
-           div.innerHTML = html;
-           return div.textContent || div.innerText || "";
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
         }
 
         function normalizeReadTime(value) {
             if (!value) return null;
 
-            const text = String(value).replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/gi, ' ').replace(/\s+/g, ' ').trim();
+            const text = String(value)
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/&nbsp;|&#160;/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
             if (!text) return null;
 
             const isoDurationMatch = text.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i);
             if (isoDurationMatch) {
                 const hours = parseInt(isoDurationMatch[1] || '0', 10);
                 const mins = parseInt(isoDurationMatch[2] || '0', 10);
-                const minutes = Math.max(1, hours * 60 + mins);
-                return `${minutes} Min. Lesezeit`;
+                return `${Math.max(1, hours * 60 + mins)} Min. Lesezeit`;
             }
 
-            const rangeMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*[–-]\s*(\d+(?:[\.,]\d+)?)\s*(?:min(?:ute[n]?)?|minutes?)/i);
-            if (rangeMatch) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(rangeMatch[2].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            const minMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:min(?:ute[n]?)?|minutes?|lesezeit|lesedauer|read(?:ing)?\s*time)/i);
-            if (minMatch) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(minMatch[1].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            const labelNumberMatch = text.match(/(?:estimated|est\.?|gesch[aä]tzte|approx(?:imate)?|ca\.?|about)?\s*(?:reading\s*time|read\s*time|lesezeit|lesedauer)?\s*:?\s*(\d+(?:[\.,]\d+)?)/i);
-            if (labelNumberMatch && /read|lese|min|minute/i.test(text)) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(labelNumberMatch[1].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
+            const numberMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:min(?:ute[n]?)?|minutes?|lesezeit|lesedauer|read(?:ing)?\s*time)/i);
+            if (numberMatch) {
+                return `${Math.max(1, Math.ceil(parseFloat(numberMatch[1].replace(',', '.'))))} Min. Lesezeit`;
             }
 
             const numberOnly = text.match(/^\d+(?:[\.,]\d+)?$/);
             if (numberOnly) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(numberOnly[0].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
+                return `${Math.max(1, Math.ceil(parseFloat(numberOnly[0].replace(',', '.'))))} Min. Lesezeit`;
             }
 
             return null;
@@ -665,7 +560,6 @@
                 '[class*="lesezeit"]',
                 '[itemprop="timeRequired"]',
                 'meta[itemprop="timeRequired"]',
-                'meta[name="twitter:data1"]',
                 'meta[name="twitter:data2"]',
                 'meta[property="article:reading_time"]',
                 'meta[property="og:time_required"]'
@@ -679,63 +573,85 @@
                 }
             }
 
-            const metaPairs = Array.from(doc.querySelectorAll('meta[name], meta[property]'));
-            for (let i = 0; i < metaPairs.length; i += 1) {
-                const name = (metaPairs[i].getAttribute('name') || metaPairs[i].getAttribute('property') || '').toLowerCase();
-                const content = (metaPairs[i].getAttribute('content') || '').trim();
-                const next = (metaPairs[i + 1]?.getAttribute('content') || '').trim();
-
-                if ((name.includes('twitter:label') || name.includes('parsely-title')) && /read|lese/i.test(content)) {
-                    const candidate = normalizeReadTime(next);
-                    if (candidate) return candidate;
-                }
-
-                if (name.includes('timerequired') || name.includes('reading_time') || name.includes('read_time')) {
-                    const candidate = normalizeReadTime(content);
-                    if (candidate) return candidate;
-                }
-            }
-
-            const scriptContents = Array.from(doc.querySelectorAll('script[type="application/ld+json"], script'))
-                .map(script => script.textContent || '')
-                .join(' ');
-
-            const scriptPatterns = [
-                /"timeRequired"\s*:\s*"(PT[^"]+)"/i,
-                /"readingTime"\s*:\s*"?([^",}\]]+)"?/i,
-                /"reading_time"\s*:\s*"?([^",}\]]+)"?/i,
-                /"estimatedReadingTime"\s*[:=]\s*"?([^",;}\]]+)"?/i,
-                /"twitter:data2"\s*content\s*=\s*"([^"]+)"/i,
-                /<strong>\s*Gesch(?:a|ä)tzte Lesezeit:\s*<\/strong>\s*<span[^>]*>([^<]+)<\/span>\s*min/i,
-                /Lesezeit\s*:?\s*(\d+(?:[\.,]\d+)?)\s*(?:Min|Minuten?)/i
-            ];
-
-            for (const pattern of scriptPatterns) {
-                const match = scriptContents.match(pattern);
-                if (match) {
-                    const candidate = normalizeReadTime(match[1]);
-                    if (candidate) return candidate;
-                }
-            }
-
             const fullText = stripHtml(html);
-            const textMatch = fullText.match(/(?:Gesch(?:a|ä)tzte\s+Lesezeit|Lesezeit|Lesedauer|Estimated\s+Reading\s+Time|Est\.?\s+reading\s+time|Reading\s+Time|Read\s+Time)\s*[:\-]?\s*(\d+(?:[\.,]\d+)?)\s*(?:Min(?:ute[n]?)?|Minutes?)?/i);
+            const textMatch = fullText.match(/(?:Gesch(?:a|ä)tzte\s+Lesezeit|Lesezeit|Lesedauer|Estimated\s+Reading\s+Time|Reading\s+Time|Read\s+Time)\s*[:\-]?\s*(\d+(?:[\.,]\d+)?)/i);
             if (textMatch) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(textMatch[1].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
+                return `${Math.max(1, Math.ceil(parseFloat(textMatch[1].replace(',', '.'))))} Min. Lesezeit`;
             }
 
             return null;
         }
 
         function extractImageUrlFromHtml(html) {
+            if (!html) return null;
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const ogImage = doc.querySelector('meta[property="og:image"]');
             return ogImage ? ogImage.getAttribute('content') : null;
         }
 
-        async function fetchArticleData(item) {
+        function getInitialArticleMeta(item) {
+            const cachedMeta = Cache.getArticleMeta(item.link);
+            const directReadTime = [
+                item.readTime,
+                item.read_time,
+                item.readingTime,
+                item.reading_time,
+                item.timeRequired,
+                item.time_required
+            ].map(normalizeReadTime).find(Boolean);
+
+            const embeddedReadTime = extractReadTimeFromHtml(item.content || item.description || '');
+            const readTime = directReadTime || embeddedReadTime || cachedMeta?.readTime || null;
+            const imageUrl = cachedMeta?.imageUrl || null;
+
+            if (readTime || imageUrl) {
+                Cache.setArticleMeta(item.link, {
+                    readTime,
+                    imageUrl,
+                    quality: readTime ? 'source' : (cachedMeta?.quality || 'fallback')
+                });
+            }
+
+            return {
+                readTime,
+                imageUrl,
+                quality: readTime ? 'source' : (cachedMeta?.quality || null)
+            };
+        }
+
+        function extractImage(item, articleMeta = null) {
+            if (articleMeta?.imageUrl) return articleMeta.imageUrl;
+            if (item.thumbnail && !item.thumbnail.match(/\.(mp3|wav|m4a|mp4)$/i)) return item.thumbnail;
+            if (item.enclosure?.link && !item.enclosure.link.match(/\.(mp3|wav|m4a|mp4)$/i)) return item.enclosure.link;
+
+            const htmlContent = item.content || item.description || '';
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            let prominentImage = null;
+
+            for (const img of doc.querySelectorAll('img')) {
+                let src = img.getAttribute('src');
+                if (!src) continue;
+                if (src.startsWith('/') && item.feedUrl) {
+                    try {
+                        src = new URL(item.feedUrl).origin + src;
+                    } catch {}
+                }
+                if (src.includes('vgwort.de') || src.includes('met.vgwort') || src.includes('emoji') || src.includes('1x1.png')) continue;
+                const width = parseInt(img.getAttribute('width')) || 0;
+                const height = parseInt(img.getAttribute('height')) || 0;
+                if (width > 100 || height > 100) return src;
+                if (!prominentImage) prominentImage = src;
+            }
+
+            if (prominentImage) return prominentImage;
+            const strategy = getSiteStrategy(item);
+            if (strategy?.fallbackImage) return strategy.fallbackImage;
+            return CONFIG.defaultImage;
+        }
+
+        async function fetchArticleMeta(item) {
             if (!item?.link) return { readTime: null, imageUrl: null };
 
             try {
@@ -746,151 +662,112 @@
                     readTime: extractReadTimeFromHtml(html),
                     imageUrl: extractImageUrlFromHtml(html)
                 };
-            } catch (directError) {
+            } catch {
                 try {
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(item.link)}`;
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok) throw new Error('Proxy fetch failed');
-                    const json = await response.json();
-                    const html = json.contents || '';
+                    const html = await fetchViaAllOrigins(item.link, 'text');
                     return {
                         readTime: extractReadTimeFromHtml(html),
                         imageUrl: extractImageUrlFromHtml(html)
                     };
-                } catch (proxyError) {
+                } catch {
                     return { readTime: null, imageUrl: null };
                 }
             }
         }
 
-        function updateArticleInDom(link, data) {
+        function updateArticleInDom(link, meta) {
             if (!link) return;
-
             const articleLink = container.querySelector(`h2 a[href="${CSS.escape(link)}"]`);
             if (!articleLink) return;
-
             const article = articleLink.closest('.article-entry');
-            
-            if (data.readTime) {
-                const readTimeNode = article?.querySelector('[data-read-time]');
+            if (!article) return;
+
+            if (meta.readTime) {
+                const readTimeNode = article.querySelector('[data-read-time]');
                 if (readTimeNode) {
-                    readTimeNode.textContent = `• ⏱️ ${data.readTime}`;
-                    readTimeNode.style.opacity = data.readTime === 'wird ermittelt' ? '0.5' : '0.7';
+                    readTimeNode.textContent = `• ⏱️ ${meta.readTime}`;
+                    readTimeNode.style.opacity = '0.7';
+                }
+            } else if (meta.readTime === 'k. A.') {
+                const readTimeNode = article.querySelector('[data-read-time]');
+                if (readTimeNode) {
+                    readTimeNode.textContent = '• ⏱️ k. A.';
+                    readTimeNode.style.opacity = '0.7';
                 }
             }
-            
-            if (data.imageUrl) {
-                const imgNode = article?.querySelector('.article-image');
-                if (imgNode && (imgNode.src.includes('sblogo') || imgNode.src.includes('placeholder') || imgNode.src.includes('tarnkappe'))) {
-                    imgNode.src = data.imageUrl;
+
+            if (meta.imageUrl) {
+                const imgNode = article.querySelector('.article-image');
+                if (imgNode) {
+                    imgNode.src = meta.imageUrl;
                 }
             }
         }
 
-        async function hydrateArticleData(item, plainTextSnippet) {
-            const cachedEntry = getCachedReadTimeEntry(item);
-            let finalReadTime = cachedEntry?.quality === 'source' ? cachedEntry.value : null;
-            let finalImageUrl = cachedEntry?.imageUrl || null;
-            
-            const currentImg = extractImage(item);
-            const needsImage = !finalImageUrl && (currentImg.includes('sblogo') || currentImg.includes('placeholder') || currentImg.includes('tarnkappe.info/wp-content/uploads/cropped-favicon'));
-            
-            let needsFetch = !finalReadTime || needsImage;
+        async function hydrateArticleMeta(item, plainTextSnippet) {
+            const currentMeta = Cache.getArticleMeta(item.link) || {};
+            const currentImage = extractImage(item, currentMeta);
+            const strategy = getSiteStrategy(item);
+            const needsImage = strategy?.hydrateImageWhen ? strategy.hydrateImageWhen(currentImage) : currentImage.includes('placeholder');
+            const needsReadTime = !currentMeta.readTime || currentMeta.quality !== 'source';
 
-            if (needsFetch) {
-                const fetched = await fetchArticleData(item);
-                if (fetched.readTime && !finalReadTime) {
-                    finalReadTime = fetched.readTime;
-                }
-                if (fetched.imageUrl) {
-                    finalImageUrl = fetched.imageUrl;
-                }
-                // Save both to cache
-                finalReadTime = saveReadTime(item, finalReadTime, 'source', finalImageUrl);
-                
-                updateArticleInDom(item.link, {
-                    readTime: finalReadTime,
-                    imageUrl: finalImageUrl
-                });
-            } else if (finalImageUrl) {
-                // Instantly update from cache
-                updateArticleInDom(item.link, { imageUrl: finalImageUrl });
+            let mergedMeta = { ...currentMeta };
+
+            if (needsImage || needsReadTime) {
+                const fetchedMeta = await fetchArticleMeta(item);
+                if (fetchedMeta.readTime) mergedMeta.readTime = fetchedMeta.readTime;
+                if (fetchedMeta.imageUrl) mergedMeta.imageUrl = fetchedMeta.imageUrl;
+                if (fetchedMeta.readTime) mergedMeta.quality = 'source';
             }
 
-            if (!finalReadTime) {
+            if (!mergedMeta.readTime) {
                 const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
                 if (wordCount >= 180) {
-                    const fallbackReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
-                    finalReadTime = saveReadTime(item, fallbackReadTime, 'fallback');
-                    updateArticleInDom(item.link, { readTime: finalReadTime });
-                    return finalReadTime;
-                }
-
-                updateArticleInDom(item.link, { readTime: 'k. A.' });
-                return null;
-            }
-
-            return finalReadTime;
-        }
-
-        function getReadTime(item) {
-            const directCandidates = [
-                item.readTime,
-                item.read_time,
-                item.readingTime,
-                item.reading_time,
-                item.timeRequired,
-                item.time_required
-            ];
-
-            for (const candidate of directCandidates) {
-                const normalized = normalizeReadTime(candidate);
-                if (normalized) {
-                    return saveReadTime(item, normalized, 'source');
+                    mergedMeta.readTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
+                    mergedMeta.quality = mergedMeta.quality || 'fallback';
                 }
             }
 
-            const htmlCandidates = [item.content, item.description];
-            for (const html of htmlCandidates) {
-                const extracted = extractReadTimeFromHtml(html);
-                if (extracted) {
-                    return saveReadTime(item, extracted, 'source');
-                }
-            }
-
-            const cachedEntry = getCachedReadTimeEntry(item);
-            if (cachedEntry?.value) {
-                return cachedEntry.value;
-            }
-
-            return null;
+            Cache.setArticleMeta(item.link, mergedMeta);
+            updateArticleInDom(item.link, {
+                readTime: mergedMeta.readTime || 'k. A.',
+                imageUrl: mergedMeta.imageUrl
+            });
         }
 
         function renderArticle(item) {
             const article = document.createElement('article');
             article.className = 'article-entry';
-            
-            const imageUrl = extractImage(item);
-            const date = new Date(item.pubDate);
-            const dateStr = !isNaN(date) ? date.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'}) + ' Uhr' : '';
-            
-            let snippet = stripHtml(item.description || item.content);
-            const readTime = getReadTime(item) || 'wird ermittelt';
 
+            const articleMeta = getInitialArticleMeta(item);
+            const imageUrl = extractImage(item, articleMeta);
+            const date = new Date(item.pubDate);
+            const dateStr = !isNaN(date)
+                ? date.toLocaleDateString('de-DE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) + ' Uhr'
+                : '';
+
+            let snippet = stripHtml(item.description || item.content);
+            const readTime = articleMeta.readTime || 'wird ermittelt';
             if (snippet.length > 250) snippet = snippet.substring(0, 250) + '...';
 
-            const cacheInfo = item.fromCache ? '⚡' : (item.isFallback ? '🛡️' : '🔄'); 
+            const cacheInfo = item.fromCache ? '⚡' : (item.isFallback ? '🛡️' : '🔄');
 
             article.innerHTML = `
                 <div class="article-content">
-                    <img src="${imageUrl}" alt="" class="article-image" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}'">
+                    <img src="${imageUrl}" alt="" class="article-image" loading="lazy" onerror="this.onerror=null;this.src='${CONFIG.defaultImage}'">
                     <div class="article-text-wrapper">
                         <header>
                             <h2><a href="${item.link}" target="_blank">${item.title}</a></h2>
                             <div class="article-meta">
                                 <span class="source-badge">${item.source} ${cacheInfo}</span>
                                 <span>${dateStr}</span>
-                                <span style="opacity:0.7" data-read-time>&bull; ⏱️ ${readTime}</span>
+                                <span style="opacity:${readTime === 'wird ermittelt' ? '0.5' : '0.7'}" data-read-time>&bull; ⏱️ ${readTime}</span>
                             </div>
                         </header>
                         <p class="article-text">${snippet}</p>
@@ -899,34 +776,53 @@
                 </div>
             `;
 
-            queueMicrotask(() => {
-                hydrateArticleData(item, stripHtml(item.description || item.content)).catch(() => {});
-            });
+            const plainTextSnippet = stripHtml(item.description || item.content);
+            HydrationQueue.enqueue(() => hydrateArticleMeta(item, plainTextSnippet));
 
             return article;
+        }
+
+        function renderLoadingSkeleton() {
+            container.innerHTML = Array(5).fill(`
+                <article class="article-entry"><div class="article-content">
+                <div class="article-image skeleton"></div><div class="article-text-wrapper"><h2 class="skeleton">Loading Title Placeholder</h2><p class="skeleton">Loading description text here. We need multiple lines so it looks like a real text block.</p></div></div></article>
+            `).join('');
+        }
+
+        function updateLastUpdate(allFeedsFresh) {
+            const now = new Date();
+            const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+            if (allFeedsFresh) {
+                localStorage.setItem('lastSuccessUpdate', now.toISOString());
+                updateInfo.textContent = 'Stand: ' + now.toLocaleDateString('de-DE', options) + ' Uhr';
+                return;
+            }
+
+            const lastUpdate = localStorage.getItem('lastSuccessUpdate');
+            if (lastUpdate) {
+                const lastDate = new Date(lastUpdate);
+                updateInfo.textContent = 'Stand: ' + lastDate.toLocaleDateString('de-DE', options) + ' Uhr';
+            } else {
+                updateInfo.textContent = 'Stand: ' + now.toLocaleDateString('de-DE', options) + ' Uhr';
+            }
         }
 
         async function init() {
             try {
                 if (container.innerHTML.trim() === '') {
-                    container.innerHTML = Array(5).fill(`
-                        <article class="article-entry"><div class="article-content">
-                        <div class="article-image skeleton"></div><div class="article-text-wrapper"><h2 class="skeleton">Loading Title Placeholder</h2><p class="skeleton">Loading description text here. We need multiple lines so it looks like a real text block.</p></div></div></article>
-                    `).join('');
+                    renderLoadingSkeleton();
                 }
+
                 updateInfo.textContent = 'Aktualisiere Feeds...';
-                
-                const promises = RSS_URLS.map(url => fetchFeed(url));
-                const results = await Promise.allSettled(promises);
-                
+                const results = await Promise.allSettled(CONFIG.rssUrls.map(fetchFeed));
+
                 let allArticles = [];
                 let allFeedsFresh = true;
 
-                results.forEach(res => {
-                    if (res.status === 'fulfilled') {
-                        allArticles.push(...res.value);
-                        // Check: Zeitstempel nur aktualisieren, wenn ALLE Feeds frisch sind.
-                        if (res.value.length === 0 || res.value[0].fromCache) {
+                results.forEach(result => {
+                    if (result.status === 'fulfilled') {
+                        allArticles.push(...result.value);
+                        if (result.value.length === 0 || result.value[0].fromCache) {
                             allFeedsFresh = false;
                         }
                     } else {
@@ -935,54 +831,57 @@
                 });
 
                 allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-                
                 container.innerHTML = '';
+
                 if (allArticles.length === 0) {
                     container.innerHTML = '<p style="text-align:center; padding: 20px;">Keine Nachrichten geladen.</p>';
                 } else {
                     allArticles.forEach(item => container.appendChild(renderArticle(item)));
                 }
 
-                // --- Update Zeitstempel Logik ---
-                const now = new Date();
-                const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
-                
-                // Wenn alle Feeds frisch sind, speichern wir den aktuellen Zeitstempel
-                if (allFeedsFresh) {
-                    localStorage.setItem('lastSuccessUpdate', now.toISOString());
-                    updateInfo.textContent = 'Stand: ' + now.toLocaleDateString('de-DE', options) + ' Uhr';
-                } else {
-                    // Wenn alles aus dem Cache kommt, zeigen wir den gespeicherten Zeitstempel an
-                    const lastUpdate = localStorage.getItem('lastSuccessUpdate');
-                    if (lastUpdate) {
-                        const lastDate = new Date(lastUpdate);
-                        updateInfo.textContent = 'Stand: ' + lastDate.toLocaleDateString('de-DE', options) + ' Uhr';
-                    } else {
-                        // Fallback: Wenn noch nie gespeichert wurde, nimm 'Jetzt' (passiert nur beim allerersten Start)
-                         updateInfo.textContent = 'Stand: ' + now.toLocaleDateString('de-DE', options) + ' Uhr';
-                    }
-                }
-
+                updateLastUpdate(allFeedsFresh);
             } catch (e) {
                 container.innerHTML = `<p style="text-align:center; color:red;">Fehler: ${e.message}</p>`;
             }
         }
 
+        function forceRefresh() {
+            refreshBtn.classList.add('spinning');
+            refreshBtn.disabled = true;
+            Cache.clearFeedCaches();
+            localStorage.removeItem('lastSuccessUpdate');
+            container.innerHTML = '<div id="loading" style="text-align: center; color: var(--text-meta); padding: 40px;">Cache gelöscht, lade Feeds neu...</div>';
+            setTimeout(() => {
+                init()
+                    .catch(() => {})
+                    .finally(() => {
+                        refreshBtn.classList.remove('spinning');
+                        refreshBtn.disabled = false;
+                    });
+            }, 500);
+        }
+
+        function initHeaderAutoHide() {
+            let lastScrollY = window.scrollY;
+            window.addEventListener('scroll', () => {
+                const header = document.querySelector('.main-header');
+                if (!header) return;
+                if (window.scrollY > lastScrollY && window.scrollY > 80) {
+                    header.style.transform = 'translateY(-100%)';
+                } else {
+                    header.style.transform = 'translateY(0)';
+                }
+                lastScrollY = window.scrollY;
+            }, { passive: true });
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+        if (refreshBtn) refreshBtn.addEventListener('click', forceRefresh);
+
+        initTheme();
+        initHeaderAutoHide();
         init();
-        setInterval(init, 5 * 60 * 1000); 
-
-        // Auto-hide header on scroll (Sheet-Verhalten)
-        let lastScrollY = window.scrollY;
-        window.addEventListener('scroll', () => {
-            const header = document.querySelector('.main-header');
-            if (window.scrollY > lastScrollY && window.scrollY > 80) {
-                header.style.transform = 'translateY(-100%)';
-            } else {
-                header.style.transform = 'translateY(0)';
-            }
-            lastScrollY = window.scrollY;
-        }, { passive: true });
-
+        setInterval(init, 5 * 60 * 1000);
     </script>
 </body>
 </html>
