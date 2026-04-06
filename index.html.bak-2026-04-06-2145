@@ -561,7 +561,7 @@
         function normalizeReadTime(value) {
             if (!value) return null;
 
-            const text = String(value).replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/gi, ' ').replace(/\s+/g, ' ').trim();
+            const text = String(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
             if (!text) return null;
 
             const isoDurationMatch = text.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/i);
@@ -572,21 +572,9 @@
                 return `${minutes} Min. Lesezeit`;
             }
 
-            const rangeMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*[–-]\s*(\d+(?:[\.,]\d+)?)\s*(?:min(?:ute[n]?)?|minutes?)/i);
-            if (rangeMatch) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(rangeMatch[2].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            const minMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:min(?:ute[n]?)?|minutes?|lesezeit|lesedauer|read(?:ing)?\s*time)/i);
+            const minMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:min(?:ute[n]?)?|lesezeit|read(?:ing)?\s*time)/i);
             if (minMatch) {
                 const minutes = Math.max(1, Math.ceil(parseFloat(minMatch[1].replace(',', '.'))));
-                return `${minutes} Min. Lesezeit`;
-            }
-
-            const labelNumberMatch = text.match(/(?:estimated|est\.?|gesch[aä]tzte|approx(?:imate)?|ca\.?|about)?\s*(?:reading\s*time|read\s*time|lesezeit|lesedauer)?\s*:?\s*(\d+(?:[\.,]\d+)?)/i);
-            if (labelNumberMatch && /read|lese|min|minute/i.test(text)) {
-                const minutes = Math.max(1, Math.ceil(parseFloat(labelNumberMatch[1].replace(',', '.'))));
                 return `${minutes} Min. Lesezeit`;
             }
 
@@ -608,15 +596,12 @@
                 '[class*="read-time"]',
                 '[class*="reading-time"]',
                 '[class*="readingtime"]',
-                '[class*="estimatedreadingtime"]',
                 '[class*="dauer"]',
                 '[class*="lesezeit"]',
                 '[itemprop="timeRequired"]',
                 'meta[itemprop="timeRequired"]',
                 'meta[name="twitter:data1"]',
-                'meta[name="twitter:data2"]',
-                'meta[property="article:reading_time"]',
-                'meta[property="og:time_required"]'
+                'meta[property="article:reading_time"]'
             ];
 
             for (const selector of selectors) {
@@ -630,44 +615,20 @@
             const metaPairs = Array.from(doc.querySelectorAll('meta[name], meta[property]'));
             for (let i = 0; i < metaPairs.length; i += 1) {
                 const name = (metaPairs[i].getAttribute('name') || metaPairs[i].getAttribute('property') || '').toLowerCase();
-                const content = (metaPairs[i].getAttribute('content') || '').trim();
-                const next = (metaPairs[i + 1]?.getAttribute('content') || '').trim();
-
-                if ((name.includes('twitter:label') || name.includes('parsely-title')) && /read|lese/i.test(content)) {
+                const content = metaPairs[i].getAttribute('content') || '';
+                if (content.toLowerCase().includes('read') || content.toLowerCase().includes('lese')) {
+                    const next = metaPairs[i + 1]?.getAttribute('content') || '';
                     const candidate = normalizeReadTime(next);
                     if (candidate) return candidate;
                 }
-
-                if (name.includes('timerequired') || name.includes('reading_time') || name.includes('read_time')) {
+                if (name.includes('timerequired') || name.includes('reading_time')) {
                     const candidate = normalizeReadTime(content);
                     if (candidate) return candidate;
                 }
             }
 
-            const scriptContents = Array.from(doc.querySelectorAll('script[type="application/ld+json"], script'))
-                .map(script => script.textContent || '')
-                .join(' ');
-
-            const scriptPatterns = [
-                /"timeRequired"\s*:\s*"(PT[^"]+)"/i,
-                /"readingTime"\s*:\s*"?([^",}\]]+)"?/i,
-                /"reading_time"\s*:\s*"?([^",}\]]+)"?/i,
-                /"estimatedReadingTime"\s*[:=]\s*"?([^",;}\]]+)"?/i,
-                /"twitter:data2"\s*content\s*=\s*"([^"]+)"/i,
-                /<strong>\s*Gesch(?:a|ä)tzte Lesezeit:\s*<\/strong>\s*<span[^>]*>([^<]+)<\/span>\s*min/i,
-                /Lesezeit\s*:?\s*(\d+(?:[\.,]\d+)?)\s*(?:Min|Minuten?)/i
-            ];
-
-            for (const pattern of scriptPatterns) {
-                const match = scriptContents.match(pattern);
-                if (match) {
-                    const candidate = normalizeReadTime(match[1]);
-                    if (candidate) return candidate;
-                }
-            }
-
             const fullText = stripHtml(html);
-            const textMatch = fullText.match(/(?:Gesch(?:a|ä)tzte\s+Lesezeit|Lesezeit|Lesedauer|Estimated\s+Reading\s+Time|Est\.?\s+reading\s+time|Reading\s+Time|Read\s+Time)\s*[:\-]?\s*(\d+(?:[\.,]\d+)?)\s*(?:Min(?:ute[n]?)?|Minutes?)?/i);
+            const textMatch = fullText.match(/(?:Lesezeit|Lesedauer|Reading Time|Read Time)\s*[:\-]?\s*(\d+(?:[\.,]\d+)?)\s*(?:Min(?:ute[n]?)?)?/i);
             if (textMatch) {
                 const minutes = Math.max(1, Math.ceil(parseFloat(textMatch[1].replace(',', '.'))));
                 return `${minutes} Min. Lesezeit`;
