@@ -465,10 +465,26 @@
             } catch (e) { console.warn("Cache Full?", e); }
         }
 
+        function normalizeCachePart(value) {
+            return String(value || '')
+                .toLowerCase()
+                .trim()
+                .replace(/https?:\/\//g, '')
+                .replace(/[#?].*$/, '')
+                .replace(/[^a-z0-9äöüß]+/gi, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
         function getReadTimeCacheKey(item) {
-            if (!item.link) return null;
-            const cleanLink = item.link.replace(/^https?:\/\//, '').replace(/\/$/, '');
-            return `read_time_cache_${cleanLink}`;
+            const stableId = [
+                item.guid,
+                item.id,
+                item.link,
+                item.title,
+                item.pubDate
+            ].map(normalizeCachePart).filter(Boolean).join('__');
+
+            return `read_time_cache_${stableId}`;
         }
 
         function getLegacyReadTimeCacheKey(item) {
@@ -544,9 +560,6 @@
         }
 
         function extractImage(item) {
-            if (item.thumbnail && !item.thumbnail.match(/\.(mp3|wav|m4a|mp4)$/i)) {
-                return item.thumbnail;
-            }
             // Prioritize enclosure link if it's an image and not audio/video
             if (item.enclosure && item.enclosure.link && !item.enclosure.link.match(/\.(mp3|wav|m4a|mp4)$/i)) {
                 return item.enclosure.link;
@@ -723,98 +736,66 @@
             return null;
         }
 
-        function extractImageUrlFromHtml(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const ogImage = doc.querySelector('meta[property="og:image"]');
-            return ogImage ? ogImage.getAttribute('content') : null;
-        }
-
-        async function fetchArticleData(item) {
-            if (!item?.link) return { readTime: null, imageUrl: null };
+        async function fetchArticleReadTime(item) {
+            if (!item?.link) return null;
 
             try {
                 const response = await fetch(item.link, { mode: 'cors' });
                 if (!response.ok) throw new Error('Direct fetch failed');
                 const html = await response.text();
-                return {
-                    readTime: extractReadTimeFromHtml(html),
-                    imageUrl: extractImageUrlFromHtml(html)
-                };
+                return extractReadTimeFromHtml(html);
             } catch (directError) {
                 try {
                     const proxyUrl = `${CORS_PROXY}${encodeURIComponent(item.link)}`;
                     const response = await fetch(proxyUrl);
                     if (!response.ok) throw new Error('Proxy fetch failed');
                     const html = await response.text();
-                    return {
-                        readTime: extractReadTimeFromHtml(html),
-                        imageUrl: extractImageUrlFromHtml(html)
-                    };
+                    return extractReadTimeFromHtml(html);
                 } catch (proxyError) {
-                    return { readTime: null, imageUrl: null };
+                    return null;
                 }
             }
         }
 
-        function updateArticleInDom(link, data) {
-            if (!link) return;
+        function updateArticleReadTimeInDom(link, readTime) {
+            if (!link || !readTime) return;
 
             const articleLink = container.querySelector(`h2 a[href="${CSS.escape(link)}"]`);
             if (!articleLink) return;
 
             const article = articleLink.closest('.article-entry');
-            
-            if (data.readTime) {
-                const readTimeNode = article?.querySelector('[data-read-time]');
-                if (readTimeNode) {
-                    readTimeNode.textContent = `• ⏱️ ${data.readTime}`;
-                    readTimeNode.style.opacity = data.readTime === 'wird ermittelt' ? '0.5' : '0.7';
-                }
-            }
-            
-            if (data.imageUrl) {
-                const imgNode = article?.querySelector('.article-image');
-                if (imgNode && (imgNode.src.includes('sblogo') || imgNode.src.includes('placeholder'))) {
-                    imgNode.src = data.imageUrl;
-                }
+            const readTimeNode = article?.querySelector('[data-read-time]');
+            if (readTimeNode) {
+                readTimeNode.textContent = `• ⏱️ ${readTime}`;
+                readTimeNode.style.opacity = readTime === 'wird ermittelt' ? '0.5' : '0.7';
             }
         }
 
-        async function hydrateArticleData(item, plainTextSnippet) {
+        async function hydrateArticleReadTime(item, plainTextSnippet) {
             const cachedEntry = getCachedReadTimeEntry(item);
-            let finalReadTime = cachedEntry?.quality === 'source' ? cachedEntry.value : null;
-            
-            const currentImg = extractImage(item);
-            const needsImage = currentImg.includes('sblogo') || currentImg.includes('placeholder');
-            
-            let needsFetch = !finalReadTime || needsImage;
+            if (cachedEntry?.quality === 'source') return cachedEntry.value;
 
-            if (needsFetch) {
-                const fetched = await fetchArticleData(item);
-                if (fetched.readTime && !finalReadTime) {
-                    finalReadTime = saveReadTime(item, fetched.readTime, 'source');
-                }
-                updateArticleInDom(item.link, {
-                    readTime: finalReadTime,
-                    imageUrl: fetched.imageUrl
-                });
+            const fetchedReadTime = await fetchArticleReadTime(item);
+            if (fetchedReadTime) {
+                const finalReadTime = saveReadTime(item, fetchedReadTime, 'source');
+                updateArticleReadTimeInDom(item.link, finalReadTime);
+                return finalReadTime;
             }
 
-            if (!finalReadTime) {
+            if (!cachedEntry?.value) {
                 const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
                 if (wordCount >= 180) {
                     const fallbackReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
-                    finalReadTime = saveReadTime(item, fallbackReadTime, 'fallback');
-                    updateArticleInDom(item.link, { readTime: finalReadTime });
+                    const finalReadTime = saveReadTime(item, fallbackReadTime, 'fallback');
+                    updateArticleReadTimeInDom(item.link, finalReadTime);
                     return finalReadTime;
                 }
 
-                updateArticleInDom(item.link, { readTime: 'k. A.' });
+                updateArticleReadTimeInDom(item.link, 'k. A.');
                 return null;
             }
 
-            return finalReadTime;
+            return cachedEntry.value;
         }
 
         function getReadTime(item) {
@@ -884,7 +865,7 @@
             `;
 
             queueMicrotask(() => {
-                hydrateArticleData(item, stripHtml(item.description || item.content)).catch(() => {});
+                hydrateArticleReadTime(item, stripHtml(item.description || item.content)).catch(() => {});
             });
 
             return article;
