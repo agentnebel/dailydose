@@ -736,60 +736,6 @@
             return null;
         }
 
-        async function fetchArticleReadTime(item) {
-            if (!item?.link) return null;
-
-            try {
-                const response = await fetch(item.link, { mode: 'cors' });
-                if (!response.ok) throw new Error('Direct fetch failed');
-                const html = await response.text();
-                return extractReadTimeFromHtml(html);
-            } catch (directError) {
-                try {
-                    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(item.link)}`;
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok) throw new Error('Proxy fetch failed');
-                    const html = await response.text();
-                    return extractReadTimeFromHtml(html);
-                } catch (proxyError) {
-                    return null;
-                }
-            }
-        }
-
-        function updateArticleReadTimeInDom(link, readTime) {
-            if (!link || !readTime) return;
-
-            const articleLink = container.querySelector(`h2 a[href="${CSS.escape(link)}"]`);
-            if (!articleLink) return;
-
-            const article = articleLink.closest('.article-entry');
-            const readTimeNode = article?.querySelector('[data-read-time]');
-            if (readTimeNode) {
-                readTimeNode.textContent = `• ⏱️ ${readTime}`;
-            }
-        }
-
-        async function hydrateArticleReadTime(item, plainTextSnippet) {
-            const cachedEntry = getCachedReadTimeEntry(item);
-            if (cachedEntry?.quality === 'source') return cachedEntry.value;
-
-            const fetchedReadTime = await fetchArticleReadTime(item);
-            if (fetchedReadTime) {
-                const finalReadTime = saveReadTime(item, fetchedReadTime, 'source');
-                updateArticleReadTimeInDom(item.link, finalReadTime);
-                return finalReadTime;
-            }
-
-            if (!cachedEntry?.value) {
-                const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
-                const fallbackReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
-                return saveReadTime(item, fallbackReadTime, 'fallback');
-            }
-
-            return cachedEntry.value;
-        }
-
         function getReadTime(item, plainTextSnippet) {
             const directCandidates = [
                 item.readTime,
@@ -849,7 +795,7 @@
                             <div class="article-meta">
                                 <span class="source-badge">${item.source} ${cacheInfo}</span>
                                 <span>${dateStr}</span>
-                                <span style="opacity:0.7" data-read-time>&bull; ⏱️ ${readTime}</span>
+                                <span style="opacity:0.7">&bull; ⏱️ ${readTime}</span>
                             </div>
                         </header>
                         <p class="article-text">${snippet}</p>
@@ -857,11 +803,6 @@
                     </div>
                 </div>
             `;
-
-            queueMicrotask(() => {
-                hydrateArticleReadTime(item, stripHtml(item.description || item.content)).catch(() => {});
-            });
-
             return article;
         }
 
