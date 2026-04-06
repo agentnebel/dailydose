@@ -275,7 +275,6 @@
         
         // Cache Konfiguration (1 Stunde = 3600000 ms)
         const CACHE_DURATION = 60 * 60 * 1000; 
-        const READ_TIME_CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
         
         const DEFAULT_IMAGE = 'https://via.placeholder.com/280x180/e0e0e0/999999?text=News';
 
@@ -463,41 +462,6 @@
                     data: data
                 }));
             } catch (e) { console.warn("Cache Full?", e); }
-        }
-
-        function getReadTimeCacheKey(item) {
-            return `read_time_cache_${item.link}`;
-        }
-
-        function getCachedReadTime(item) {
-            try {
-                const cached = localStorage.getItem(getReadTimeCacheKey(item));
-                if (!cached) return null;
-
-                const parsed = JSON.parse(cached);
-                const age = Date.now() - parsed.timestamp;
-                if (age > READ_TIME_CACHE_DURATION) {
-                    localStorage.removeItem(getReadTimeCacheKey(item));
-                    return null;
-                }
-
-                return parsed.value || null;
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function saveReadTime(item, value) {
-            if (!value || !item.link) return;
-
-            try {
-                localStorage.setItem(getReadTimeCacheKey(item), JSON.stringify({
-                    timestamp: Date.now(),
-                    value
-                }));
-            } catch (e) {
-                console.warn('Read time cache full?', e);
-            }
         }
 
         function extractImage(item) {
@@ -689,24 +653,13 @@
 
             for (const candidate of directCandidates) {
                 const normalized = normalizeReadTime(candidate);
-                if (normalized) {
-                    saveReadTime(item, normalized);
-                    return normalized;
-                }
+                if (normalized) return normalized;
             }
 
             const htmlCandidates = [item.content, item.description];
             for (const html of htmlCandidates) {
                 const extracted = extractReadTimeFromHtml(html);
-                if (extracted) {
-                    saveReadTime(item, extracted);
-                    return extracted;
-                }
-            }
-
-            const cachedReadTime = getCachedReadTime(item);
-            if (cachedReadTime) {
-                return cachedReadTime;
+                if (extracted) return extracted;
             }
 
             const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
