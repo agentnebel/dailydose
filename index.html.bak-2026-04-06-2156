@@ -465,98 +465,39 @@
             } catch (e) { console.warn("Cache Full?", e); }
         }
 
-        function normalizeCachePart(value) {
-            return String(value || '')
-                .toLowerCase()
-                .trim()
-                .replace(/https?:\/\//g, '')
-                .replace(/[#?].*$/, '')
-                .replace(/[^a-z0-9äöüß]+/gi, '-')
-                .replace(/^-+|-+$/g, '');
-        }
-
         function getReadTimeCacheKey(item) {
-            const stableId = [
-                item.guid,
-                item.id,
-                item.link,
-                item.title,
-                item.pubDate
-            ].map(normalizeCachePart).filter(Boolean).join('__');
-
-            return `read_time_cache_${stableId}`;
+            return `read_time_cache_${item.link}`;
         }
 
-        function getLegacyReadTimeCacheKey(item) {
-            return item.link ? `read_time_cache_${item.link}` : null;
-        }
+        function getCachedReadTime(item) {
+            try {
+                const cached = localStorage.getItem(getReadTimeCacheKey(item));
+                if (!cached) return null;
 
-        function getCachedReadTimeEntry(item) {
-            const keys = [getReadTimeCacheKey(item), getLegacyReadTimeCacheKey(item)].filter(Boolean);
-
-            for (const key of keys) {
-                try {
-                    const cached = localStorage.getItem(key);
-                    if (!cached) continue;
-
-                    const parsed = JSON.parse(cached);
-                    const age = Date.now() - parsed.timestamp;
-                    if (age > READ_TIME_CACHE_DURATION) {
-                        localStorage.removeItem(key);
-                        continue;
-                    }
-
-                    if (parsed.value) {
-                        return {
-                            key,
-                            value: parsed.value,
-                            quality: parsed.quality || 'fallback'
-                        };
-                    }
-                } catch (e) {
-                    continue;
+                const parsed = JSON.parse(cached);
+                const age = Date.now() - parsed.timestamp;
+                if (age > READ_TIME_CACHE_DURATION) {
+                    localStorage.removeItem(getReadTimeCacheKey(item));
+                    return null;
                 }
-            }
 
-            return null;
+                return parsed.value || null;
+            } catch (e) {
+                return null;
+            }
         }
 
-        function saveReadTime(item, value, quality = 'source') {
-            if (!value) return;
-
-            const cacheKey = getReadTimeCacheKey(item);
-            const existing = getCachedReadTimeEntry(item);
-            const nextQualityRank = quality === 'source' ? 2 : 1;
-            const existingQualityRank = existing?.quality === 'source' ? 2 : (existing?.quality === 'fallback' ? 1 : 0);
-
-            if (existing && existingQualityRank > nextQualityRank) {
-                return existing.value;
-            }
-
-            if (existing && existingQualityRank === nextQualityRank) {
-                const existingMinutes = parseInt(existing.value, 10) || 0;
-                const nextMinutes = parseInt(value, 10) || 0;
-                if (existingMinutes > nextMinutes) {
-                    return existing.value;
-                }
-            }
+        function saveReadTime(item, value) {
+            if (!value || !item.link) return;
 
             try {
-                localStorage.setItem(cacheKey, JSON.stringify({
+                localStorage.setItem(getReadTimeCacheKey(item), JSON.stringify({
                     timestamp: Date.now(),
-                    value,
-                    quality
+                    value
                 }));
-
-                const legacyKey = getLegacyReadTimeCacheKey(item);
-                if (legacyKey && legacyKey !== cacheKey) {
-                    localStorage.removeItem(legacyKey);
-                }
             } catch (e) {
                 console.warn('Read time cache full?', e);
             }
-
-            return value;
         }
 
         function extractImage(item) {
@@ -749,7 +690,8 @@
             for (const candidate of directCandidates) {
                 const normalized = normalizeReadTime(candidate);
                 if (normalized) {
-                    return saveReadTime(item, normalized, 'source');
+                    saveReadTime(item, normalized);
+                    return normalized;
                 }
             }
 
@@ -757,18 +699,18 @@
             for (const html of htmlCandidates) {
                 const extracted = extractReadTimeFromHtml(html);
                 if (extracted) {
-                    return saveReadTime(item, extracted, 'source');
+                    saveReadTime(item, extracted);
+                    return extracted;
                 }
             }
 
-            const cachedEntry = getCachedReadTimeEntry(item);
-            if (cachedEntry?.value) {
-                return cachedEntry.value;
+            const cachedReadTime = getCachedReadTime(item);
+            if (cachedReadTime) {
+                return cachedReadTime;
             }
 
             const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
-            const fallbackReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
-            return saveReadTime(item, fallbackReadTime, 'fallback');
+            return `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
         }
 
         function renderArticle(item) {
