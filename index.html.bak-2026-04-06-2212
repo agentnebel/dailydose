@@ -767,7 +767,6 @@
             const readTimeNode = article?.querySelector('[data-read-time]');
             if (readTimeNode) {
                 readTimeNode.textContent = `• ⏱️ ${readTime}`;
-                readTimeNode.style.opacity = readTime === 'wird ermittelt' ? '0.5' : '0.7';
             }
         }
 
@@ -784,21 +783,14 @@
 
             if (!cachedEntry?.value) {
                 const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
-                if (wordCount >= 180) {
-                    const fallbackReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
-                    const finalReadTime = saveReadTime(item, fallbackReadTime, 'fallback');
-                    updateArticleReadTimeInDom(item.link, finalReadTime);
-                    return finalReadTime;
-                }
-
-                updateArticleReadTimeInDom(item.link, 'k. A.');
-                return null;
+                const fallbackReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
+                return saveReadTime(item, fallbackReadTime, 'fallback');
             }
 
             return cachedEntry.value;
         }
 
-        function getReadTime(item) {
+        function getReadTime(item, plainTextSnippet) {
             const directCandidates = [
                 item.readTime,
                 item.read_time,
@@ -828,7 +820,9 @@
                 return cachedEntry.value;
             }
 
-            return null;
+            const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
+            const fallbackReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
+            return saveReadTime(item, fallbackReadTime, 'fallback');
         }
 
         function renderArticle(item) {
@@ -840,7 +834,7 @@
             const dateStr = !isNaN(date) ? date.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'}) + ' Uhr' : '';
             
             let snippet = stripHtml(item.description || item.content);
-            const readTime = getReadTime(item) || 'wird ermittelt';
+            const readTime = getReadTime(item, snippet);
 
             if (snippet.length > 250) snippet = snippet.substring(0, 250) + '...';
 
