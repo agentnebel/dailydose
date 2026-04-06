@@ -490,12 +490,11 @@
                         continue;
                     }
 
-                    if (parsed.value || parsed.imageUrl) {
+                    if (parsed.value) {
                         return {
                             key,
                             value: parsed.value,
-                            quality: parsed.quality || 'fallback',
-                            imageUrl: parsed.imageUrl
+                            quality: parsed.quality || 'fallback'
                         };
                     }
                 } catch (e) {
@@ -506,35 +505,31 @@
             return null;
         }
 
-        function saveReadTime(item, value, quality = 'source', imageUrl = null) {
-            if (!value && !imageUrl) return;
+        function saveReadTime(item, value, quality = 'source') {
+            if (!value) return;
 
             const cacheKey = getReadTimeCacheKey(item);
             const existing = getCachedReadTimeEntry(item);
-            
-            // Preserve existing imageUrl if we're only updating readTime
-            const finalImageUrl = imageUrl || existing?.imageUrl || null;
-
             const nextQualityRank = quality === 'source' ? 2 : 1;
             const existingQualityRank = existing?.quality === 'source' ? 2 : (existing?.quality === 'fallback' ? 1 : 0);
 
-            let finalValue = value;
             if (existing && existingQualityRank > nextQualityRank) {
-                finalValue = existing.value;
-            } else if (existing && existingQualityRank === nextQualityRank) {
+                return existing.value;
+            }
+
+            if (existing && existingQualityRank === nextQualityRank) {
                 const existingMinutes = parseInt(existing.value, 10) || 0;
                 const nextMinutes = parseInt(value, 10) || 0;
                 if (existingMinutes > nextMinutes) {
-                    finalValue = existing.value;
+                    return existing.value;
                 }
             }
 
             try {
                 localStorage.setItem(cacheKey, JSON.stringify({
                     timestamp: Date.now(),
-                    value: finalValue,
-                    quality,
-                    imageUrl: finalImageUrl
+                    value,
+                    quality
                 }));
 
                 const legacyKey = getLegacyReadTimeCacheKey(item);
@@ -748,11 +743,10 @@
                 };
             } catch (directError) {
                 try {
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(item.link)}`;
+                    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(item.link)}`;
                     const response = await fetch(proxyUrl);
                     if (!response.ok) throw new Error('Proxy fetch failed');
-                    const json = await response.json();
-                    const html = json.contents || '';
+                    const html = await response.text();
                     return {
                         readTime: extractReadTimeFromHtml(html),
                         imageUrl: extractImageUrlFromHtml(html)
@@ -790,31 +784,21 @@
         async function hydrateArticleData(item, plainTextSnippet) {
             const cachedEntry = getCachedReadTimeEntry(item);
             let finalReadTime = cachedEntry?.quality === 'source' ? cachedEntry.value : null;
-            let finalImageUrl = cachedEntry?.imageUrl || null;
             
             const currentImg = extractImage(item);
-            const needsImage = !finalImageUrl && (currentImg.includes('sblogo') || currentImg.includes('placeholder'));
+            const needsImage = currentImg.includes('sblogo') || currentImg.includes('placeholder');
             
             let needsFetch = !finalReadTime || needsImage;
 
             if (needsFetch) {
                 const fetched = await fetchArticleData(item);
                 if (fetched.readTime && !finalReadTime) {
-                    finalReadTime = fetched.readTime;
+                    finalReadTime = saveReadTime(item, fetched.readTime, 'source');
                 }
-                if (fetched.imageUrl) {
-                    finalImageUrl = fetched.imageUrl;
-                }
-                // Save both to cache
-                finalReadTime = saveReadTime(item, finalReadTime, 'source', finalImageUrl);
-                
                 updateArticleInDom(item.link, {
                     readTime: finalReadTime,
-                    imageUrl: finalImageUrl
+                    imageUrl: fetched.imageUrl
                 });
-            } else if (finalImageUrl) {
-                // Instantly update from cache
-                updateArticleInDom(item.link, { imageUrl: finalImageUrl });
             }
 
             if (!finalReadTime) {
