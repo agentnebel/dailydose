@@ -168,7 +168,7 @@
 
         async function fetchViaAllOrigins(url, responseType = 'text') {
             const proxyUrl = `${CONFIG.xmlProxy}${encodeURIComponent(url)}`;
-            const response = await fetch(proxyUrl);
+            const response = await fetchWithTimeout(proxyUrl, { timeout: 8000 });
             if (!response.ok) throw new Error('Proxy fetch failed');
             const json = await response.json();
             const contents = json.contents || '';
@@ -224,7 +224,7 @@
 
             try {
                 const apiUrl = `${CONFIG.apiBase}${encodeURIComponent(url)}&api_key=${CONFIG.apiKey}`;
-                const response = await fetch(apiUrl);
+                const response = await fetchWithTimeout(apiUrl, { timeout: 6000 });
                 if (!response.ok) throw new Error('Primary API failed');
                 const data = await response.json();
                 if (data.status !== 'ok') throw new Error('API returned error status');
@@ -246,6 +246,20 @@
                     console.error(`[Feed Fetch] Failed for ${url}:`, fallbackError);
                     return [];
                 }
+            }
+        }
+
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 8000 } = options;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
             }
         }
 
@@ -332,17 +346,22 @@
 
         function getInitialArticleMeta(item) {
             const cachedMeta = Cache.getArticleMeta(item.link);
-            const directReadTime = [
-                item.readTime,
-                item.read_time,
-                item.readingTime,
-                item.reading_time,
-                item.timeRequired,
-                item.time_required
-            ].map(normalizeReadTime).find(Boolean);
+            let readTime = cachedMeta?.readTime || null;
 
-            const embeddedReadTime = extractReadTimeFromHtml(item.content || item.description || '');
-            const readTime = directReadTime || embeddedReadTime || cachedMeta?.readTime || null;
+            if (!readTime) {
+                const directReadTime = [
+                    item.readTime,
+                    item.read_time,
+                    item.readingTime,
+                    item.reading_time,
+                    item.timeRequired,
+                    item.time_required
+                ].map(normalizeReadTime).find(Boolean);
+
+                const embeddedReadTime = extractReadTimeFromHtml(item.content || item.description || '');
+                readTime = directReadTime || embeddedReadTime || null;
+            }
+
             const imageUrl = cachedMeta?.imageUrl || null;
 
             if (readTime || imageUrl) {
@@ -556,14 +575,29 @@
                     renderLoadingSkeleton();
                 }
 
-                updateInfo.textContent = 'Aktualisiere Feeds...';
-                const results = await Promise.allSettled(CONFIG.rssUrls.map(fetchFeed));
+                updateInfo.textContent = 'Aktualisiere Feeds (0/' + CONFIG.rssUrls.length + ')...';
+                let loaded = 0;
+
+                const fetchPromises = CONFIG.rssUrls.map(async url => {
+                    try {
+                        const items = await fetchFeed(url);
+                        loaded++;
+                        updateInfo.textContent = 'Aktualisiere Feeds (' + loaded + '/' + CONFIG.rssUrls.length + ')...';
+                        return items;
+                    } catch (e) {
+                        loaded++;
+                        updateInfo.textContent = 'Aktualisiere Feeds (' + loaded + '/' + CONFIG.rssUrls.length + ')...';
+                        return [];
+                    }
+                });
+
+                const results = await Promise.allSettled(fetchPromises);
 
                 let allArticles = [];
                 let allFeedsFresh = true;
 
                 results.forEach(result => {
-                    if (result.status === 'fulfilled') {
+                    if (result.status === 'fulfilled' && result.value) {
                         allArticles.push(...result.value);
                         if (result.value.length === 0 || result.value[0].fromCache) {
                             allFeedsFresh = false;
