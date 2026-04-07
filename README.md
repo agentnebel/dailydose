@@ -125,8 +125,8 @@ Implemented internal improvements:
 
 Potential next steps:
 
-- [ ] move JavaScript into `app.js`
-- [ ] move CSS into `styles.css`
+- [x] move JavaScript into `app.js`
+- [x] move CSS into `styles.css`
 - [ ] replace client-side API key with Worker proxy
 - [ ] add search/filtering
 - [ ] add PWA support
