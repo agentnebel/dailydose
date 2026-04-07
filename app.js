@@ -424,8 +424,6 @@
 
             return { readTime, imageUrl };
         }
-        }
-
         function updateArticleInDom(link, meta) {
             if (!link) return;
             const articleLink = container.querySelector(`h2 a[href="${CSS.escape(link)}"]`);
