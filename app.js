@@ -49,7 +49,7 @@
             articleMetaKey(link) {
                 if (!link) return null;
                 const cleanLink = link.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                return `article_meta_cache_${cleanLink}`;
+                return `article_meta_v3_cache_${cleanLink}`;
             },
             getFeed(url) {
                 try {
@@ -394,25 +394,36 @@
         async function fetchArticleMeta(item) {
             if (!item?.link) return { readTime: null, imageUrl: null };
 
+            let html = null;
             try {
                 const response = await fetch(item.link, { mode: 'cors' });
-                if (!response.ok) throw new Error('Direct fetch failed');
-                const html = await response.text();
-                return {
-                    readTime: extractReadTimeFromHtml(html),
-                    imageUrl: extractImageUrlFromHtml(html)
-                };
+                if (response.ok) html = await response.text();
             } catch {
                 try {
-                    const html = await fetchViaAllOrigins(item.link, 'text');
-                    return {
-                        readTime: extractReadTimeFromHtml(html),
-                        imageUrl: extractImageUrlFromHtml(html)
-                    };
-                } catch {
-                    return { readTime: null, imageUrl: null };
+                    html = await fetchViaAllOrigins(item.link, 'text');
+                } catch {}
+            }
+
+            if (!html) return { readTime: null, imageUrl: null };
+
+            let readTime = extractReadTimeFromHtml(html);
+            const imageUrl = extractImageUrlFromHtml(html);
+
+            if (!readTime) {
+                try {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    doc.querySelectorAll('script, style, nav, header, footer, aside, .sidebar, .comments').forEach(el => el.remove());
+                    const textContent = doc.body ? doc.body.textContent : '';
+                    const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
+                    if (wordCount > 50) {
+                        readTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
+                    }
+                } catch (e) {
                 }
             }
+
+            return { readTime, imageUrl };
+        }
         }
 
         function updateArticleInDom(link, meta) {
@@ -460,13 +471,7 @@
                 if (fetchedMeta.readTime) mergedMeta.quality = 'source';
             }
 
-            if (!mergedMeta.readTime) {
-                const wordCount = plainTextSnippet.trim().split(/\s+/).filter(Boolean).length;
-                if (wordCount >= 180) {
-                    mergedMeta.readTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
-                    mergedMeta.quality = mergedMeta.quality || 'fallback';
-                }
-            }
+            
 
             Cache.setArticleMeta(item.link, mergedMeta);
             updateArticleInDom(item.link, {
