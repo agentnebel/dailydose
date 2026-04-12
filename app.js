@@ -427,7 +427,20 @@
             let prominentImage = null;
 
             for (const img of doc.querySelectorAll('img')) {
-                let src = img.getAttribute('src');
+                let src = img.getAttribute('src')
+                    || img.getAttribute('data-src')
+                    || img.getAttribute('data-lazy-src')
+                    || img.getAttribute('data-original');
+
+                if (!src) {
+                    const srcSet = img.getAttribute('srcset')
+                        || img.getAttribute('data-srcset')
+                        || img.getAttribute('data-lazy-srcset');
+                    if (srcSet) {
+                        src = srcSet.split(',')[0]?.trim().split(/\s+/)[0];
+                    }
+                }
+
                 if (!src) continue;
                 if (src.startsWith('/') && item.feedUrl) {
                     try {
@@ -537,6 +550,7 @@
 
             const articleMeta = getInitialArticleMeta(item);
             const imageUrl = extractImage(item, articleMeta);
+            const fallbackImage = getSiteStrategy(item)?.fallbackImage || CONFIG.defaultImage;
             const date = new Date(item.pubDate);
             const dateStr = !isNaN(date)
                 ? date.toLocaleDateString('de-DE', {
@@ -556,7 +570,7 @@
 
             article.innerHTML = `
                 <div class="article-content">
-                    <img src="${imageUrl}" alt="" class="article-image" loading="lazy" onerror="this.onerror=null;this.src='${CONFIG.defaultImage}'">
+                    <img src="${imageUrl}" alt="" class="article-image" loading="lazy" onerror="this.onerror=null;this.src='${fallbackImage}'">
                     <div class="article-text-wrapper">
                         <header>
                             <h2><a href="${item.link}" target="_blank">${item.title}</a></h2>
