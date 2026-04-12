@@ -473,13 +473,9 @@
         function extractImageUrlFromMarkdown(markdown, baseUrl = null) {
             if (!markdown) return null;
 
-            const matches = [
-                ...markdown.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/gi),
-                ...markdown.matchAll(/https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s)]*)?/gi)
-            ];
+            const urls = markdown.match(/https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s)]*)?/gi) || [];
 
-            for (const match of matches) {
-                const raw = Array.isArray(match) ? (match[1] || match[0]) : match;
+            for (const raw of urls) {
                 const resolved = resolveImageUrl(raw, baseUrl);
                 if (isUsableArticleImage(resolved)) return resolved;
             }
