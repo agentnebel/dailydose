@@ -15,7 +15,7 @@
             apiKey: 'l42es2jwwhkaq8xn72z4ogwjrx2zepbbecqh4gfc',
             apiBase: 'https://api.rss2json.com/v1/api.json?rss_url=',
             xmlProxy: 'https://api.allorigins.win/get?url=',
-            textProxy: 'https://r.jina.ai/http/',
+            textProxy: 'https://r.jina.ai/http://',
             cacheDurationMs: 60 * 60 * 1000,
             articleMetaCacheDurationMs: 7 * 24 * 60 * 60 * 1000,
             hydrateConcurrency: 3,
