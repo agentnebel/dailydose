@@ -64,7 +64,7 @@
             articleMetaKey(link) {
                 if (!link) return null;
                 const cleanLink = link.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                return `article_meta_v5_cache_${cleanLink}`;
+                return `article_meta_v6_cache_${cleanLink}`;
             },
             getFeed(url) {
                 try {
@@ -470,17 +470,91 @@
             return null;
         }
 
-        function extractImageUrlFromMarkdown(markdown, baseUrl = null) {
+        function extractImageUrlFromMarkdown(markdown, baseUrl = null, itemTitle = '') {
             if (!markdown) return null;
 
-            const urls = markdown.match(/https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s)]*)?/gi) || [];
+            const startMarker = 'Markdown Content:';
+            let scopedMarkdown = markdown.includes(startMarker)
+                ? markdown.slice(markdown.indexOf(startMarker) + startMarker.length)
+                : markdown;
 
-            for (const raw of urls) {
-                const resolved = resolveImageUrl(raw, baseUrl);
-                if (isUsableArticleImage(resolved)) return resolved;
+            const firstHeadingIndex = scopedMarkdown.search(/^#\s+/m);
+            if (firstHeadingIndex >= 0) {
+                scopedMarkdown = scopedMarkdown.slice(firstHeadingIndex);
             }
 
-            return null;
+            const stopMarkers = [
+                '\n**Gefällt dir der Artikel?**',
+                '\n## Kommentare',
+                '\n# Kommentare',
+                '\n## Related',
+                '\n## Ähnliche',
+                '\n## Weitere Artikel',
+                '\n## Mehr zum Thema',
+                '\n## Author',
+                '\n## Über den Autor'
+            ];
+            const lowerScoped = scopedMarkdown.toLowerCase();
+            let cutIndex = scopedMarkdown.length;
+            for (const marker of stopMarkers) {
+                const idx = lowerScoped.indexOf(marker.toLowerCase());
+                if (idx >= 0 && idx < cutIndex) cutIndex = idx;
+            }
+            scopedMarkdown = scopedMarkdown.slice(0, cutIndex);
+
+            const contextRejects = [
+                'avatar',
+                'author',
+                'autor',
+                'comment',
+                'kommentar',
+                'gravatar',
+                'cookie',
+                'consentmanager',
+                'newsletter',
+                'forum',
+                'shop',
+                'podcast',
+                'teilen',
+                'share',
+                'social',
+                'amazon',
+                'werben',
+                'anzeige',
+                'sponsored',
+                'recommended',
+                'related'
+            ];
+
+            const lines = scopedMarkdown.split(/\r?\n/);
+            const candidates = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const urls = line.match(/https?:\/\/[^\s)\]]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s)\]]*)?/gi) || [];
+                if (!urls.length) continue;
+
+                const localContext = [line, lines[i + 1] || '', lines[i + 2] || ''].join(' ').toLowerCase();
+                if (contextRejects.some(term => localContext.includes(term))) continue;
+
+                for (const raw of urls) {
+                    const resolved = resolveImageUrl(raw, baseUrl);
+                    if (!isUsableArticleImage(resolved)) continue;
+
+                    let score = 0;
+                    if (i < 40) score += 4;
+                    if (i < 80) score += 2;
+                    if (resolved.includes('/wp-content/uploads/')) score += 2;
+                    if (resolved.includes('/uploads/20')) score += 2;
+                    if (itemTitle && localContext.includes(itemTitle.toLowerCase().slice(0, 24))) score += 1;
+                    if (/^!\[image/i.test(line.trim())) score += 1;
+
+                    candidates.push({ resolved, score, lineIndex: i });
+                }
+            }
+
+            candidates.sort((a, b) => b.score - a.score || a.lineIndex - b.lineIndex);
+            return candidates[0]?.resolved || null;
         }
 
         function getInitialArticleMeta(item) {
@@ -597,7 +671,7 @@
             let readTime = html ? extractReadTimeFromHtml(html) : null;
             const imageUrl = html
                 ? extractImageUrlFromHtml(html, item.link)
-                : extractImageUrlFromMarkdown(markdown, item.link);
+                : extractImageUrlFromMarkdown(markdown, item.link, item.title || '');
 
             if (!readTime) {
                 try {
