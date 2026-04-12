@@ -18,7 +18,21 @@
             cacheDurationMs: 60 * 60 * 1000,
             articleMetaCacheDurationMs: 7 * 24 * 60 * 60 * 1000,
             hydrateConcurrency: 3,
-            defaultImage: 'https://via.placeholder.com/280x180/e0e0e0/999999?text=News'
+            defaultImage: 'https://via.placeholder.com/280x180/e0e0e0/999999?text=News',
+            sourceReadTimeMinutes: {
+                'www.blocktrainer.de': 9,
+                'petapixel.com': 7,
+                'www.ifun.de': 4,
+                'stadt-bremerhaven.de': 6,
+                'streetletter.substack.com': 8,
+                'upphotographers.com': 6,
+                'eortizfoto.substack.com': 7,
+                'tarnkappe.info': 7,
+                'www.kuketz-blog.de': 8,
+                'www.heise.de': 6,
+                'rss.golem.de': 5
+            },
+            defaultReadTimeMinutes: 5
         };
 
         const SITE_STRATEGIES = [
@@ -300,6 +314,22 @@
             return null;
         }
 
+        function getHostnameFromUrl(url) {
+            if (!url) return null;
+            try {
+                return new URL(url).hostname.toLowerCase();
+            } catch {
+                return null;
+            }
+        }
+
+        function getSourceBasedReadTime(item) {
+            const hostname = getHostnameFromUrl(item?.link) || getHostnameFromUrl(item?.feedUrl);
+            const knownMinutes = hostname ? CONFIG.sourceReadTimeMinutes[hostname] : null;
+            const minutes = knownMinutes || CONFIG.defaultReadTimeMinutes;
+            return `${Math.max(1, Math.ceil(minutes))} Min. Lesezeit`;
+        }
+
         function extractReadTimeFromHtml(html) {
             if (!html) return null;
 
@@ -347,6 +377,7 @@
         function getInitialArticleMeta(item) {
             const cachedMeta = Cache.getArticleMeta(item.link);
             let readTime = cachedMeta?.readTime || null;
+            let readTimeQuality = cachedMeta?.quality || null;
 
             if (!readTime) {
                 const directReadTime = [
@@ -360,6 +391,12 @@
 
                 const embeddedReadTime = extractReadTimeFromHtml(item.content || item.description || '');
                 readTime = directReadTime || embeddedReadTime || null;
+                if (readTime) readTimeQuality = 'source';
+            }
+
+            if (!readTime) {
+                readTime = getSourceBasedReadTime(item);
+                readTimeQuality = 'source-fallback';
             }
 
             const imageUrl = cachedMeta?.imageUrl || null;
@@ -368,14 +405,14 @@
                 Cache.setArticleMeta(item.link, {
                     readTime,
                     imageUrl,
-                    quality: readTime ? 'source' : (cachedMeta?.quality || 'fallback')
+                    quality: readTimeQuality || (imageUrl ? 'fallback' : null)
                 });
             }
 
             return {
                 readTime,
                 imageUrl,
-                quality: readTime ? 'source' : (cachedMeta?.quality || null)
+                quality: readTimeQuality
             };
         }
 
@@ -456,12 +493,6 @@
                     readTimeNode.textContent = `• ⏱️ ${meta.readTime}`;
                     readTimeNode.style.opacity = '0.7';
                 }
-            } else if (meta.readTime === 'k. A.') {
-                const readTimeNode = article.querySelector('[data-read-time]');
-                if (readTimeNode) {
-                    readTimeNode.textContent = '• ⏱️ k. A.';
-                    readTimeNode.style.opacity = '0.7';
-                }
             }
 
             if (meta.imageUrl) {
@@ -472,7 +503,7 @@
             }
         }
 
-        async function hydrateArticleMeta(item, plainTextSnippet) {
+        async function hydrateArticleMeta(item) {
             const currentMeta = Cache.getArticleMeta(item.link) || {};
             const currentImage = extractImage(item, currentMeta);
             const strategy = getSiteStrategy(item);
@@ -488,11 +519,14 @@
                 if (fetchedMeta.readTime) mergedMeta.quality = 'source';
             }
 
-            
+            if (!mergedMeta.readTime) {
+                mergedMeta.readTime = getSourceBasedReadTime(item);
+                mergedMeta.quality = mergedMeta.quality || 'source-fallback';
+            }
 
             Cache.setArticleMeta(item.link, mergedMeta);
             updateArticleInDom(item.link, {
-                readTime: mergedMeta.readTime || 'k. A.',
+                readTime: mergedMeta.readTime,
                 imageUrl: mergedMeta.imageUrl
             });
         }
@@ -538,8 +572,7 @@
                 </div>
             `;
 
-            const plainTextSnippet = stripHtml(item.description || item.content);
-            HydrationQueue.enqueue(() => hydrateArticleMeta(item, plainTextSnippet));
+            HydrationQueue.enqueue(() => hydrateArticleMeta(item));
 
             return article;
         }
