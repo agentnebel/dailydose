@@ -366,46 +366,95 @@
             return null;
         }
 
-        function extractImageUrlFromHtml(html, articleUrl = null) {
+        function resolveImageUrl(rawUrl, baseUrl = null) {
+            if (!rawUrl) return null;
+            try {
+                return new URL(rawUrl, baseUrl || window.location.href).href;
+            } catch {
+                return rawUrl;
+            }
+        }
+
+        function isUsableArticleImage(src) {
+            if (!src) return false;
+            const lowered = src.toLowerCase();
+            return !(
+                lowered.includes('vgwort.de') ||
+                lowered.includes('met.vgwort') ||
+                lowered.includes('emoji') ||
+                lowered.includes('1x1.png') ||
+                lowered.includes('placeholder') ||
+                lowered.includes('favicon') ||
+                lowered.includes('/icon/') ||
+                lowered.includes('cropped-favicon') ||
+                lowered.includes('sblogo') ||
+                lowered.includes('gravatar.com') ||
+                lowered.includes('avatar') ||
+                lowered.includes('m.media-amazon.com') ||
+                lowered.startsWith('data:image/gif')
+            );
+        }
+
+        function extractFirstArticleImageFromDoc(doc, baseUrl = null) {
+            if (!doc) return null;
+
+            const scopedRoots = [
+                '[itemprop="articleBody"]',
+                '.entry-content',
+                '.post-content',
+                '.article-content',
+                '.td-post-content',
+                '.content',
+                'article',
+                'main article',
+                'main'
+            ];
+
+            for (const selector of scopedRoots) {
+                const root = doc.querySelector(selector);
+                if (!root) continue;
+
+                for (const img of root.querySelectorAll('img')) {
+                    const src = resolveImageUrl(
+                        img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('data-lazy-src'),
+                        baseUrl
+                    );
+                    if (!isUsableArticleImage(src)) continue;
+
+                    const width = parseInt(img.getAttribute('width')) || 0;
+                    const height = parseInt(img.getAttribute('height')) || 0;
+                    if ((width && width < 80) || (height && height < 80)) continue;
+
+                    return src;
+                }
+            }
+
+            for (const img of doc.querySelectorAll('img')) {
+                const src = resolveImageUrl(
+                    img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('data-lazy-src'),
+                    baseUrl
+                );
+                if (!isUsableArticleImage(src)) continue;
+                return src;
+            }
+
+            return null;
+        }
+
+        function extractImageUrlFromHtml(html, baseUrl = null) {
             if (!html) return null;
 
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
-            const normalizeImageSource = (src) => {
-                if (!src) return null;
-                let normalized = src.trim();
-                if (!normalized || normalized.startsWith('data:')) return null;
+            const firstArticleImage = extractFirstArticleImageFromDoc(doc, baseUrl);
+            if (firstArticleImage) return firstArticleImage;
 
-                if (normalized.startsWith('//')) {
-                    normalized = `https:${normalized}`;
-                } else if (normalized.startsWith('/') && articleUrl) {
-                    try {
-                        normalized = new URL(normalized, articleUrl).href;
-                    } catch {}
-                }
+            const ogImage = doc.querySelector('meta[property="og:image"]');
+            const ogImageUrl = resolveImageUrl(ogImage ? ogImage.getAttribute('content') : null, baseUrl);
+            if (isUsableArticleImage(ogImageUrl)) return ogImageUrl;
 
-                if (normalized.includes('vgwort.de') || normalized.includes('met.vgwort') || normalized.includes('emoji') || normalized.includes('1x1')) {
-                    return null;
-                }
-
-                return normalized;
-            };
-
-            const firstImage = doc.querySelector('img');
-            if (firstImage) {
-                const firstImageSource = firstImage.getAttribute('src')
-                    || firstImage.getAttribute('data-src')
-                    || firstImage.getAttribute('data-lazy-src')
-                    || firstImage.getAttribute('data-original')
-                    || firstImage.getAttribute('srcset')?.split(',')[0]?.trim().split(/\s+/)[0];
-
-                const normalizedFirstImage = normalizeImageSource(firstImageSource);
-                if (normalizedFirstImage) return normalizedFirstImage;
-            }
-
-            const ogImage = doc.querySelector('meta[property="og:image"]')?.getAttribute('content');
-            return normalizeImageSource(ogImage);
+            return null;
         }
 
         function getInitialArticleMeta(item) {
