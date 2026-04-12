@@ -63,7 +63,7 @@
             articleMetaKey(link) {
                 if (!link) return null;
                 const cleanLink = link.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                return `article_meta_v3_cache_${cleanLink}`;
+                return `article_meta_v4_cache_${cleanLink}`;
             },
             getFeed(url) {
                 try {
