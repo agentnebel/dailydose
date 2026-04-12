@@ -366,12 +366,46 @@
             return null;
         }
 
-        function extractImageUrlFromHtml(html) {
+        function extractImageUrlFromHtml(html, articleUrl = null) {
             if (!html) return null;
+
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
-            const ogImage = doc.querySelector('meta[property="og:image"]');
-            return ogImage ? ogImage.getAttribute('content') : null;
+
+            const normalizeImageSource = (src) => {
+                if (!src) return null;
+                let normalized = src.trim();
+                if (!normalized || normalized.startsWith('data:')) return null;
+
+                if (normalized.startsWith('//')) {
+                    normalized = `https:${normalized}`;
+                } else if (normalized.startsWith('/') && articleUrl) {
+                    try {
+                        normalized = new URL(normalized, articleUrl).href;
+                    } catch {}
+                }
+
+                if (normalized.includes('vgwort.de') || normalized.includes('met.vgwort') || normalized.includes('emoji') || normalized.includes('1x1')) {
+                    return null;
+                }
+
+                return normalized;
+            };
+
+            const firstImage = doc.querySelector('img');
+            if (firstImage) {
+                const firstImageSource = firstImage.getAttribute('src')
+                    || firstImage.getAttribute('data-src')
+                    || firstImage.getAttribute('data-lazy-src')
+                    || firstImage.getAttribute('data-original')
+                    || firstImage.getAttribute('srcset')?.split(',')[0]?.trim().split(/\s+/)[0];
+
+                const normalizedFirstImage = normalizeImageSource(firstImageSource);
+                if (normalizedFirstImage) return normalizedFirstImage;
+            }
+
+            const ogImage = doc.querySelector('meta[property="og:image"]')?.getAttribute('content');
+            return normalizeImageSource(ogImage);
         }
 
         function getInitialArticleMeta(item) {
@@ -476,7 +510,7 @@
             if (!html) return { readTime: null, imageUrl: null };
 
             let readTime = extractReadTimeFromHtml(html);
-            const imageUrl = extractImageUrlFromHtml(html);
+            const imageUrl = extractImageUrlFromHtml(html, item.link);
 
             if (!readTime) {
                 try {
