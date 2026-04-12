@@ -18,7 +18,9 @@
             textProxy: 'https://r.jina.ai/http://',
             cacheDurationMs: 60 * 60 * 1000,
             articleMetaCacheDurationMs: 7 * 24 * 60 * 60 * 1000,
-            hydrateConcurrency: 3,
+            hydrateConcurrency: 5,
+            visibleHydrationBoostCount: 8,
+            backgroundHydrationDelayMs: 1200,
             defaultImage: 'https://via.placeholder.com/280x180/e0e0e0/999999?text=News',
             sourceReadTimeMinutes: {
                 'www.blocktrainer.de': 9,
@@ -134,25 +136,63 @@
 
         const HydrationQueue = {
             queue: [],
+            pendingKeys: new Set(),
             running: 0,
-            enqueue(task) {
-                this.queue.push(task);
+            enqueue(key, task, priority = 0) {
+                if (!key || this.pendingKeys.has(key)) return;
+                this.pendingKeys.add(key);
+                this.queue.push({ key, task, priority });
+                this.queue.sort((a, b) => b.priority - a.priority);
                 this.pump();
             },
             pump() {
                 while (this.running < CONFIG.hydrateConcurrency && this.queue.length > 0) {
-                    const task = this.queue.shift();
+                    const { key, task } = this.queue.shift();
                     this.running += 1;
                     Promise.resolve()
                         .then(task)
                         .catch(() => {})
                         .finally(() => {
                             this.running -= 1;
+                            this.pendingKeys.delete(key);
                             this.pump();
                         });
                 }
             }
         };
+
+        function enqueueHydrationForItem(item, priority = 0) {
+            if (!item?.link) return;
+            HydrationQueue.enqueue(item.link, () => hydrateArticleMeta(item), priority);
+        }
+
+        function scheduleHydration(allArticles) {
+            if (!Array.isArray(allArticles) || allArticles.length === 0) return;
+
+            const visibleItems = allArticles.slice(0, CONFIG.visibleHydrationBoostCount);
+            visibleItems.forEach((item, index) => enqueueHydrationForItem(item, 100 - index));
+
+            if ('IntersectionObserver' in window) {
+                const articleMap = new Map(allArticles.map(item => [item.link, item]));
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) return;
+                        const link = entry.target.getAttribute('data-link');
+                        const item = articleMap.get(link);
+                        if (item) enqueueHydrationForItem(item, 80);
+                        observer.unobserve(entry.target);
+                    });
+                }, { rootMargin: '600px 0px' });
+
+                requestAnimationFrame(() => {
+                    document.querySelectorAll('.article-entry[data-link]').forEach(article => observer.observe(article));
+                });
+            }
+
+            setTimeout(() => {
+                allArticles.forEach((item, index) => enqueueHydrationForItem(item, Math.max(1, 40 - index)));
+            }, CONFIG.backgroundHydrationDelayMs);
+        }
 
         function getSiteStrategy(item) {
             return SITE_STRATEGIES.find(strategy => strategy.match(item)) || null;
@@ -743,9 +783,10 @@
             });
         }
 
-        function renderArticle(item) {
+        function renderArticle(item, index = 0) {
             const article = document.createElement('article');
             article.className = 'article-entry';
+            if (item?.link) article.dataset.link = item.link;
 
             const articleMeta = getInitialArticleMeta(item);
             const imageUrl = extractImage(item, articleMeta);
@@ -769,7 +810,7 @@
 
             article.innerHTML = `
                 <div class="article-content">
-                    <img src="${imageUrl}" alt="" class="article-image" loading="lazy" onerror="this.onerror=null;this.src='${fallbackImage}'">
+                    <img src="${imageUrl}" alt="" class="article-image" loading="${index < CONFIG.visibleHydrationBoostCount ? 'eager' : 'lazy'}" fetchpriority="${index < 3 ? 'high' : 'auto'}" decoding="async" onerror="this.onerror=null;this.src='${fallbackImage}'">
                     <div class="article-text-wrapper">
                         <header>
                             <h2><a href="${item.link}" target="_blank">${item.title}</a></h2>
@@ -784,8 +825,6 @@
                     </div>
                 </div>
             `;
-
-            HydrationQueue.enqueue(() => hydrateArticleMeta(item));
 
             return article;
         }
@@ -859,7 +898,8 @@
                 if (allArticles.length === 0) {
                     container.innerHTML = '<p style="text-align:center; padding: 20px;">Keine Nachrichten geladen.</p>';
                 } else {
-                    allArticles.forEach(item => container.appendChild(renderArticle(item)));
+                    allArticles.forEach((item, index) => container.appendChild(renderArticle(item, index)));
+                    scheduleHydration(allArticles);
                 }
 
                 updateLastUpdate(allFeedsFresh);
