@@ -15,6 +15,7 @@
             apiKey: 'l42es2jwwhkaq8xn72z4ogwjrx2zepbbecqh4gfc',
             apiBase: 'https://api.rss2json.com/v1/api.json?rss_url=',
             xmlProxy: 'https://api.allorigins.win/get?url=',
+            textProxy: 'https://r.jina.ai/http/',
             cacheDurationMs: 60 * 60 * 1000,
             articleMetaCacheDurationMs: 7 * 24 * 60 * 60 * 1000,
             hydrateConcurrency: 3,
@@ -63,7 +64,7 @@
             articleMetaKey(link) {
                 if (!link) return null;
                 const cleanLink = link.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                return `article_meta_v4_cache_${cleanLink}`;
+                return `article_meta_v5_cache_${cleanLink}`;
             },
             getFeed(url) {
                 try {
@@ -187,6 +188,14 @@
             const json = await response.json();
             const contents = json.contents || '';
             return responseType === 'json' ? JSON.parse(contents) : contents;
+        }
+
+        async function fetchViaJina(url) {
+            const cleanUrl = url.replace(/^https?:\/\//, '');
+            const proxyUrl = `${CONFIG.textProxy}${cleanUrl}`;
+            const response = await fetchWithTimeout(proxyUrl, { timeout: 12000 });
+            if (!response.ok) throw new Error('Jina fetch failed');
+            return response.text();
         }
 
         function parseXMLFeed(xmlText, feedUrl) {
@@ -388,6 +397,10 @@
                 lowered.includes('/icon/') ||
                 lowered.includes('cropped-favicon') ||
                 lowered.includes('sblogo') ||
+                lowered.includes('cropped-caschy') ||
+                lowered.includes('caschy-logo') ||
+                lowered.includes('tarnkappe-info-logo') ||
+                lowered.includes('logo-header') ||
                 lowered.includes('gravatar.com') ||
                 lowered.includes('avatar') ||
                 lowered.includes('m.media-amazon.com') ||
@@ -453,6 +466,23 @@
             const ogImage = doc.querySelector('meta[property="og:image"]');
             const ogImageUrl = resolveImageUrl(ogImage ? ogImage.getAttribute('content') : null, baseUrl);
             if (isUsableArticleImage(ogImageUrl)) return ogImageUrl;
+
+            return null;
+        }
+
+        function extractImageUrlFromMarkdown(markdown, baseUrl = null) {
+            if (!markdown) return null;
+
+            const matches = [
+                ...markdown.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/gi),
+                ...markdown.matchAll(/https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s)]*)?/gi)
+            ];
+
+            for (const match of matches) {
+                const raw = Array.isArray(match) ? (match[1] || match[0]) : match;
+                const resolved = resolveImageUrl(raw, baseUrl);
+                if (isUsableArticleImage(resolved)) return resolved;
+            }
 
             return null;
         }
@@ -547,25 +577,41 @@
             if (!item?.link) return { readTime: null, imageUrl: null };
 
             let html = null;
+            let markdown = null;
+
             try {
                 const response = await fetch(item.link, { mode: 'cors' });
                 if (response.ok) html = await response.text();
-            } catch {
+            } catch {}
+
+            if (!html) {
                 try {
                     html = await fetchViaAllOrigins(item.link, 'text');
                 } catch {}
             }
 
-            if (!html) return { readTime: null, imageUrl: null };
+            if (!html) {
+                try {
+                    markdown = await fetchViaJina(item.link);
+                } catch {}
+            }
 
-            let readTime = extractReadTimeFromHtml(html);
-            const imageUrl = extractImageUrlFromHtml(html, item.link);
+            if (!html && !markdown) return { readTime: null, imageUrl: null };
+
+            let readTime = html ? extractReadTimeFromHtml(html) : null;
+            const imageUrl = html
+                ? extractImageUrlFromHtml(html, item.link)
+                : extractImageUrlFromMarkdown(markdown, item.link);
 
             if (!readTime) {
                 try {
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-                    doc.querySelectorAll('script, style, nav, header, footer, aside, .sidebar, .comments').forEach(el => el.remove());
-                    const textContent = doc.body ? doc.body.textContent : '';
+                    const textContent = html
+                        ? (() => {
+                            const doc = new DOMParser().parseFromString(html, 'text/html');
+                            doc.querySelectorAll('script, style, nav, header, footer, aside, .sidebar, .comments').forEach(el => el.remove());
+                            return doc.body ? doc.body.textContent : '';
+                        })()
+                        : stripHtml(markdown || '');
                     const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
                     if (wordCount > 50) {
                         readTime = `${Math.max(1, Math.ceil(wordCount / 200))} Min. Lesezeit`;
