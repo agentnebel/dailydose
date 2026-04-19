@@ -228,3 +228,20 @@
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
         }
+
+        a { color: var(--link-color); }
+        a:hover { text-decoration: underline; }
+
+        a:focus-visible,
+        button:focus-visible {
+            outline: 2px solid var(--link-color);
+            outline-offset: 3px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
+        }
