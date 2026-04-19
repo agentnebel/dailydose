@@ -45,7 +45,35 @@
       'rss.golem.de': 5
     },
 
-    defaultReadTimeMinutes: 5
+    defaultReadTimeMinutes: 5,
+
+    priority: {
+      enabled: true,
+      sourceWeights: {
+        'www.blocktrainer.de': 12,
+        'www.heise.de': 10,
+        'rss.golem.de': 9,
+        'www.kuketz-blog.de': 8,
+        'tarnkappe.info': 8,
+        'petapixel.com': 6,
+        'www.ifun.de': 5,
+        'www.iphone-ticker.de': 5
+      },
+      keywordWeights: {
+        bitcoin: 8,
+        btc: 8,
+        ki: 7,
+        ai: 7,
+        llm: 7,
+        sicherheit: 6,
+        security: 6,
+        datenschutz: 5,
+        kamera: 4,
+        apple: 4,
+        iphone: 4
+      },
+      maxScore: 100
+    }
   };
 
   const SITE_STRATEGIES = [
@@ -70,6 +98,12 @@
       fallbackImage: 'https://cdn.petapixel.com/assets/assets/images/logos/petapixel-logo.png'
     }
   ];
+
+  const PRIORITY_STOPWORDS = new Set([
+    'der', 'die', 'das', 'und', 'oder', 'ein', 'eine', 'einer', 'einem', 'dem', 'den', 'des',
+    'mit', 'auf', 'im', 'in', 'zu', 'von', 'for', 'the', 'and', 'mit', 'bei', 'nicht', 'aber',
+    'this', 'that', 'wie', 'was', 'ist', 'sind', 'bei', 'aus', 'zum', 'zur', 'auch'
+  ]);
 
   const Cache = {
     feedKey(url) {
@@ -391,6 +425,135 @@
     const knownMinutes = hostname ? CONFIG.sourceReadTimeMinutes[hostname] : null;
     const minutes = knownMinutes || CONFIG.defaultReadTimeMinutes;
     return `${Math.max(1, Math.ceil(minutes))} Min. Lesezeit`;
+  }
+
+  function normalizeTextForPriority(text) {
+    return String(text || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function buildPriorityContext(items) {
+    const repeatedWordCounts = new Map();
+
+    for (const preparedItem of items) {
+      const uniqueWords = new Set(preparedItem.tokens);
+      // Count per item once, so long texts do not dominate the trend signal.
+      uniqueWords.forEach((word) => {
+        if (word.length < 3 || PRIORITY_STOPWORDS.has(word)) return;
+        repeatedWordCounts.set(word, (repeatedWordCounts.get(word) || 0) + 1);
+      });
+    }
+
+    return {
+      nowMs: Date.now(),
+      repeatedWordCounts,
+      sourceWeights: CONFIG.priority.sourceWeights,
+      keywordWeights: CONFIG.priority.keywordWeights,
+      maxScore: Math.max(1, CONFIG.priority.maxScore || 100)
+    };
+  }
+
+  function calculatePriorityScore(preparedItem, context) {
+    let score = 0;
+    const reasons = [];
+
+    const ageHours = Number.isFinite(preparedItem.pubDateMs)
+      ? (context.nowMs - preparedItem.pubDateMs) / (60 * 60 * 1000)
+      : null;
+
+    let recencyScore = 4;
+    if (ageHours !== null && ageHours >= 0) {
+      if (ageHours <= 6) recencyScore = 30;
+      else if (ageHours <= 24) recencyScore = 22;
+      else if (ageHours <= 72) recencyScore = 14;
+      else if (ageHours <= 168) recencyScore = 8;
+      else recencyScore = 3;
+    }
+    score += recencyScore;
+    if (recencyScore >= 22) reasons.push('fresh');
+
+    const sourceScore = context.sourceWeights[preparedItem.hostname] || 0;
+    score += sourceScore;
+    if (sourceScore > 0) reasons.push('source');
+
+    let keywordScore = 0;
+    Object.keys(context.keywordWeights).forEach((keyword) => {
+      if (preparedItem.tokenSet.has(keyword) || preparedItem.normalizedText.includes(` ${keyword} `)) {
+        keywordScore += context.keywordWeights[keyword];
+      }
+    });
+    keywordScore = Math.min(28, keywordScore);
+    score += keywordScore;
+    if (keywordScore > 0) reasons.push('keywords');
+
+    let trendScore = 0;
+    preparedItem.tokenSet.forEach((word) => {
+      if (word.length < 3 || PRIORITY_STOPWORDS.has(word)) return;
+      const count = context.repeatedWordCounts.get(word) || 0;
+      if (count >= 2) trendScore += Math.min(2, count - 1);
+    });
+    trendScore = Math.min(10, trendScore);
+    score += trendScore;
+    if (trendScore > 0) reasons.push('trend');
+
+    const clampedScore = Math.max(0, Math.min(context.maxScore, Math.round(score)));
+    const highThreshold = Math.round(context.maxScore * 0.7);
+    const mediumThreshold = Math.round(context.maxScore * 0.4);
+
+    let priorityLevel = 'low';
+    if (clampedScore >= highThreshold) priorityLevel = 'high';
+    else if (clampedScore >= mediumThreshold) priorityLevel = 'medium';
+
+    return {
+      priorityScore: clampedScore,
+      priorityLevel,
+      priorityReasons: reasons.slice(0, 3)
+    };
+  }
+
+  function decorateArticlesWithPriority(items) {
+    if (!Array.isArray(items) || items.length === 0) return items;
+
+    if (!CONFIG.priority.enabled) {
+      items.forEach((item) => {
+        item.priorityScore = 0;
+        item.priorityLevel = 'low';
+        item.priorityReasons = [];
+      });
+      return items;
+    }
+
+    const preparedItems = items.map((item) => {
+      const normalizedText = ` ${normalizeTextForPriority(
+        `${item.title || ''} ${stripHtml(item.description || '')}`
+      )} `;
+      const tokens = normalizedText.trim().split(' ').filter(Boolean);
+      const pubDateMs = Date.parse(item.pubDate || item.pub_date || item.published || '');
+      return {
+        item,
+        normalizedText,
+        tokens,
+        tokenSet: new Set(tokens),
+        pubDateMs: Number.isFinite(pubDateMs) ? pubDateMs : null,
+        hostname: getHostnameFromUrl(item.link) || getHostnameFromUrl(item.feedUrl) || ''
+      };
+    });
+
+    const context = buildPriorityContext(preparedItems);
+
+    preparedItems.forEach((preparedItem) => {
+      const meta = calculatePriorityScore(preparedItem, context);
+      preparedItem.item.priorityScore = meta.priorityScore;
+      preparedItem.item.priorityLevel = meta.priorityLevel;
+      preparedItem.item.priorityReasons = meta.priorityReasons;
+    });
+
+    return items;
   }
 
   function extractReadTimeFromHtml(html) {
@@ -1046,6 +1209,7 @@
       });
 
       allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      decorateArticlesWithPriority(allArticles);
 
       container.innerHTML = '';
 
