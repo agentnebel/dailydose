@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Daily Dose – persönlicher RSS-Aggregator, alle wichtigen News auf einen Blick.">
     <title>Daily Dose for Sven</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,8 +16,8 @@
                 <div id="last-update"></div>
             </div>
             <div class="header-buttons">
-                <button class="action-btn" id="refresh-btn" title="Feeds aktualisieren">🔄</button>
-                <button class="theme-toggle" id="theme-toggle" title="Dark Mode umschalten">🌙</button>
+                <button class="action-btn" id="refresh-btn" type="button" title="Feeds aktualisieren" aria-label="Feeds aktualisieren">🔄</button>
+                <button class="theme-toggle" id="theme-toggle" type="button" title="Dark Mode umschalten" aria-label="Theme umschalten" aria-pressed="false">🌙</button>
             </div>
         </div>
     </header>
@@ -26,6 +28,10 @@
         </div>
     </div>
 
-    <script src="app.js?v=8"></script>
+    <noscript style="display:block; text-align:center; color: var(--text-meta); padding: 24px;">
+        Bitte JavaScript aktivieren, um die Feeds zu laden.
+    </noscript>
+
+    <script src="app.js"></script>
 </body>
 </html>
