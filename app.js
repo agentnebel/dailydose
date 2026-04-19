@@ -105,6 +105,8 @@
     'this', 'that', 'wie', 'was', 'ist', 'sind', 'bei', 'aus', 'zum', 'zur', 'auch'
   ]);
 
+  const SORT_MODE_STORAGE_KEY = 'sortMode';
+
   const Cache = {
     feedKey(url) {
       return `feed_cache_${url}`;
@@ -182,9 +184,12 @@
   const updateInfo = document.getElementById('last-update');
   const themeToggle = document.getElementById('theme-toggle');
   const refreshBtn = document.getElementById('refresh-btn');
+  const sortLatestBtn = document.getElementById('sort-latest-btn');
+  const sortPriorityBtn = document.getElementById('sort-priority-btn');
 
   const UI_STATE = {
-    sortMode: 'latest'
+    sortMode: 'latest',
+    currentArticles: []
   };
 
   if (!container || !updateInfo) {
@@ -234,6 +239,20 @@
 
   function getSiteStrategy(item) {
     return SITE_STRATEGIES.find((strategy) => strategy.match(item)) || null;
+  }
+
+  function isValidSortMode(mode) {
+    return mode === 'latest' || mode === 'priority';
+  }
+
+  function updateSortModeControls() {
+    if (!sortLatestBtn || !sortPriorityBtn) return;
+
+    const latestActive = UI_STATE.sortMode === 'latest';
+    sortLatestBtn.classList.toggle('is-active', latestActive);
+    sortPriorityBtn.classList.toggle('is-active', !latestActive);
+    sortLatestBtn.setAttribute('aria-pressed', String(latestActive));
+    sortPriorityBtn.setAttribute('aria-pressed', String(!latestActive));
   }
 
   function updateToggleIcon(theme) {
@@ -1186,6 +1205,42 @@
       .join('');
   }
 
+  function renderCurrentArticles() {
+    const sortedArticles = UI_STATE.currentArticles.slice();
+    sortItems(sortedArticles, UI_STATE.sortMode);
+
+    container.innerHTML = '';
+
+    if (sortedArticles.length === 0) {
+      container.innerHTML =
+        '<p style="text-align:center; padding: 20px;">Keine Nachrichten geladen.</p>';
+      return sortedArticles;
+    }
+
+    sortedArticles.forEach((item) => container.appendChild(renderArticle(item)));
+    return sortedArticles;
+  }
+
+  function setSortMode(mode, options = {}) {
+    const { persist = true, rerender = true } = options;
+    if (!isValidSortMode(mode)) return;
+
+    UI_STATE.sortMode = mode;
+    if (persist) localStorage.setItem(SORT_MODE_STORAGE_KEY, mode);
+
+    updateSortModeControls();
+
+    if (rerender && UI_STATE.currentArticles.length > 0) {
+      renderCurrentArticles();
+    }
+  }
+
+  function initSortMode() {
+    const savedMode = localStorage.getItem(SORT_MODE_STORAGE_KEY);
+    if (isValidSortMode(savedMode)) UI_STATE.sortMode = savedMode;
+    updateSortModeControls();
+  }
+
   function updateLastUpdate(allFeedsFresh) {
     const now = new Date();
 
@@ -1239,17 +1294,10 @@
       });
 
       decorateArticlesWithPriority(allArticles);
-      sortItems(allArticles, UI_STATE.sortMode);
+      UI_STATE.currentArticles = allArticles;
 
-      container.innerHTML = '';
-
-      if (allArticles.length === 0) {
-        container.innerHTML =
-          '<p style="text-align:center; padding: 20px;">Keine Nachrichten geladen.</p>';
-      } else {
-        allArticles.forEach((item) => container.appendChild(renderArticle(item)));
-        scheduleHydration(allArticles);
-      }
+      const sortedArticles = renderCurrentArticles();
+      if (sortedArticles.length > 0) scheduleHydration(sortedArticles);
 
       updateLastUpdate(allFeedsFresh);
     } catch (e) {
@@ -1301,8 +1349,11 @@
 
   if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
   if (refreshBtn) refreshBtn.addEventListener('click', forceRefresh);
+  if (sortLatestBtn) sortLatestBtn.addEventListener('click', () => setSortMode('latest'));
+  if (sortPriorityBtn) sortPriorityBtn.addEventListener('click', () => setSortMode('priority'));
 
   initTheme();
+  initSortMode();
   initHeaderAutoHide();
   init();
   setInterval(init, 5 * 60 * 1000);
