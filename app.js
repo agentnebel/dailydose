@@ -1113,6 +1113,26 @@
 
     const cacheInfo = item.fromCache ? '⚡' : item.isFallback ? '🛟' : '';
 
+    const priorityLevelKey =
+      item.priorityLevel === 'high' || item.priorityLevel === 'medium' ? item.priorityLevel : 'low';
+    const priorityLabel =
+      priorityLevelKey === 'high' ? 'High' : priorityLevelKey === 'medium' ? 'Medium' : 'Low';
+    const priorityClass =
+      priorityLevelKey === 'high'
+        ? 'priority-high'
+        : priorityLevelKey === 'medium'
+          ? 'priority-medium'
+          : 'priority-low';
+    const reasonMap = {
+      fresh: 'fresh',
+      source: 'source',
+      keywords: 'keywords',
+      trend: 'trend'
+    };
+    const reasonKey =
+      Array.isArray(item.priorityReasons) && item.priorityReasons[0] ? item.priorityReasons[0] : '';
+    const priorityReasonText = reasonMap[reasonKey] || '';
+
     const content = document.createElement('div');
     content.className = 'article-content';
 
@@ -1152,6 +1172,10 @@
     badge.className = 'source-badge';
     badge.textContent = String(item.source || '').trim() || 'Feed';
 
+    const priorityBadge = document.createElement('span');
+    priorityBadge.className = `priority-badge ${priorityClass}`;
+    priorityBadge.textContent = priorityLabel;
+
     const metaText = document.createElement('span');
     metaText.textContent = `${cacheInfo ? cacheInfo + ' ' : ''}${dateStr}`.trim();
 
@@ -1160,6 +1184,15 @@
     readTimeNode.textContent = `• ⏱️ ${readTime}`;
 
     meta.appendChild(badge);
+    meta.appendChild(priorityBadge);
+
+    if (priorityReasonText) {
+      const priorityReason = document.createElement('span');
+      priorityReason.className = 'priority-reason';
+      priorityReason.textContent = `• ${priorityReasonText}`;
+      meta.appendChild(priorityReason);
+    }
+
     if (metaText.textContent) meta.appendChild(metaText);
     meta.appendChild(readTimeNode);
 
