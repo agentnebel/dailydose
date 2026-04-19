@@ -183,6 +183,10 @@
   const themeToggle = document.getElementById('theme-toggle');
   const refreshBtn = document.getElementById('refresh-btn');
 
+  const UI_STATE = {
+    sortMode: 'latest'
+  };
+
   if (!container || !updateInfo) {
     console.error('[DailyDose] Missing #feed-container or #last-update');
     return;
@@ -299,6 +303,32 @@
     const div = document.createElement('div');
     div.innerHTML = String(html || '');
     return div.textContent || div.innerText || '';
+  }
+
+  function getItemPubDateMs(item, fallbackValue = -Infinity) {
+    const pubDateMs = Date.parse(item?.pubDate || item?.pub_date || item?.published || '');
+    return Number.isFinite(pubDateMs) ? pubDateMs : fallbackValue;
+  }
+
+  function sortItemsByPubDateDesc(items) {
+    items.sort((a, b) => getItemPubDateMs(b) - getItemPubDateMs(a));
+    return items;
+  }
+
+  function sortItemsByPriorityDesc(items) {
+    items.sort((a, b) => {
+      const scoreA = Number.isFinite(a.priorityScore) ? a.priorityScore : 0;
+      const scoreB = Number.isFinite(b.priorityScore) ? b.priorityScore : 0;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return getItemPubDateMs(b) - getItemPubDateMs(a);
+    });
+    return items;
+  }
+
+  function sortItems(items, sortMode) {
+    if (!Array.isArray(items) || items.length < 2) return items;
+    if (sortMode === 'priority') return sortItemsByPriorityDesc(items);
+    return sortItemsByPubDateDesc(items);
   }
 
   function parseXMLFeed(xmlText, feedUrl) {
@@ -533,13 +563,13 @@
         `${item.title || ''} ${stripHtml(item.description || '')}`
       )} `;
       const tokens = normalizedText.trim().split(' ').filter(Boolean);
-      const pubDateMs = Date.parse(item.pubDate || item.pub_date || item.published || '');
+      const pubDateMs = getItemPubDateMs(item, null);
       return {
         item,
         normalizedText,
         tokens,
         tokenSet: new Set(tokens),
-        pubDateMs: Number.isFinite(pubDateMs) ? pubDateMs : null,
+        pubDateMs,
         hostname: getHostnameFromUrl(item.link) || getHostnameFromUrl(item.feedUrl) || ''
       };
     });
@@ -1208,8 +1238,8 @@
         }
       });
 
-      allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
       decorateArticlesWithPriority(allArticles);
+      sortItems(allArticles, UI_STATE.sortMode);
 
       container.innerHTML = '';
 
